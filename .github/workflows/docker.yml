@@ -62,6 +62,10 @@ jobs:
             org.opencontainers.image.title=${{ matrix.function }}
             org.opencontainers.image.description=Microservice ${{ matrix.function }} for Edgegap OpenMatch
             org.opencontainers.image.vendor=Cajun Pro LLC
+          annotations: |
+            manifest:org.opencontainers.image.title=${{ matrix.function }}
+            manifest:org.opencontainers.image.description=Microservice ${{ matrix.function }} for Edgegap OpenMatch
+            manifest:org.opencontainers.image.vendor=Cajun Pro LLC
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
 
@@ -76,10 +80,3 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
-
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v1
-        with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}-${{ matrix.function }}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
