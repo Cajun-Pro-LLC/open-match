@@ -28,20 +28,21 @@ type TicketRequestModel struct {
 
 // Create a ticket by communicating with Open Match core Front End service
 func createTicket(ctx echo.Context) error {
+	c := ctx.(*Context)
 	log.Println("Creating ticket...")
 
 	// Get The player IP. This will be used later to make a call at Arbitrium (Edgegap's solution)
-	echoServer := ctx.Echo()
-	request := ctx.Request()
+	echoServer := c.Echo()
+	request := c.Request()
 	playerIP := echoServer.IPExtractor(request)
 
 	userTicketRequest := TicketRequestModel{}
 
 	// Bind the request JSON body to our model
-	err := ctx.Bind(&userTicketRequest)
+	err := c.Bind(&userTicketRequest)
 	if err != nil {
 		log.Println("Request Payload didn't match TicketRequestModel attributes")
-		return NewError(ctx, http.StatusBadRequest)
+		return c.RespondError(http.StatusBadRequest)
 	}
 
 	service, conn := getFrontendServiceClient()
@@ -84,16 +85,16 @@ func createTicket(ctx echo.Context) error {
 		log.Printf("Error checking for existing ticket: %v", err.Error())
 	}
 	if existingTicket != nil {
-		return NewResponse(ctx, existingTicket)
+		return c.Respond(existingTicket)
 	}
 
 	ticket, err := service.CreateTicket(context.Background(), req)
 	if err != nil {
 		log.Printf("Was not able to create a ticket, err: %s\n", err.Error())
-		return NewError(ctx, http.StatusInternalServerError)
+		return c.RespondError(http.StatusInternalServerError)
 	}
 
-	return NewResponse(ctx, ticket)
+	return c.Respond(ticket)
 }
 
 func getExistingTicket(playerId string) (*pb.Ticket, error) {
@@ -161,7 +162,8 @@ func getQueryServiceClient() (pb.QueryServiceClient, *grpc.ClientConn) {
 }
 
 func getTicket(ctx echo.Context) error {
-	ticketID := ctx.Param("ticketId")
+	c := ctx.(*Context)
+	ticketID := c.Param("ticketId")
 
 	service, conn := getFrontendServiceClient()
 	defer func() {
@@ -174,14 +176,15 @@ func getTicket(ctx echo.Context) error {
 	ticket, err := service.GetTicket(context.Background(), &pb.GetTicketRequest{TicketId: ticketID})
 	if err != nil {
 		log.Printf("Was not able to get a ticket, err: %s\n", err.Error())
-		return NewError(ctx, http.StatusNotFound)
+		return c.RespondError(http.StatusNotFound)
 	}
 
-	return NewResponse(ctx, ticket)
+	return c.Respond(ticket)
 }
 
 func deleteTicket(ctx echo.Context) error {
-	ticketID := ctx.Param("ticketId")
+	c := ctx.(*Context)
+	ticketID := c.Param("ticketId")
 
 	service, conn := getFrontendServiceClient()
 	defer func() {
@@ -194,19 +197,22 @@ func deleteTicket(ctx echo.Context) error {
 	_, err := service.DeleteTicket(context.Background(), &pb.DeleteTicketRequest{TicketId: ticketID})
 	if err != nil {
 		fmt.Printf("Was not able to delete a ticket, err: %s\n", err.Error())
-		return NewError(ctx, http.StatusNotFound)
+		return c.RespondError(http.StatusNotFound)
 	}
 
-	return NewResponse(ctx, pb.Ticket{Id: ticketID})
+	return c.Respond(pb.Ticket{Id: ticketID})
 }
-
 func main() {
 	fmt.Println("Starting Frontend Service...")
 
 	e := echo.New()
 	e.Pre(middleware.RemoveTrailingSlash())
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			return next(&Context{c})
+		}
+	})
 	e.Use(middleware.RequestID())
-
 	// How to extract IP
 	e.IPExtractor = echo.ExtractIPDirect()
 
