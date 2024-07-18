@@ -204,6 +204,7 @@ func main() {
 	fmt.Println("Starting Frontend Service...")
 
 	e := echo.New()
+	e.Pre(middleware.RemoveTrailingSlash())
 	e.Use(middleware.RequestID())
 
 	// How to extract IP
@@ -217,7 +218,7 @@ func main() {
 
 	tickets := v1.Group("/tickets")
 	// Create a ticket
-	tickets.POST("/", createTicket)
+	tickets.POST("", createTicket)
 	// Get a ticket
 	tickets.GET("/:ticketId", getTicket)
 	// Delete a ticket
