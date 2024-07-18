@@ -58,6 +58,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.function }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.function }}
+            org.opencontainers.image.description=Microservice ${{ matrix.function }} for Edgegap OpenMatch
+            org.opencontainers.image.vendor=Cajun Pro LLC
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
 
@@ -71,6 +75,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
