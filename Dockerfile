@@ -1,7 +1,12 @@
-FROM golang:alpine AS go
+FROM golang:1.22-alpine AS build
 ARG FUNCTION_NAME
 WORKDIR /app
 ENV GO111MODULE=on
 COPY /edgegap/$FUNCTION_NAME .
-RUN go mod tidy && go build -o main .
-CMD ["/app/main"]
+RUN go mod tidy
+RUN CGO_ENABLED=0 go build -o main .
+
+FROM gcr.io/distroless/static-debian11
+COPY --from=build /app/main /app
+
+ENTRYPOINT ["/app"]
