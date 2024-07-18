@@ -34,7 +34,6 @@ func newProcessor(server *grpc.Server) {
 
 	p := processor{client: pb.NewQueryServiceClient(conn)}
 	pb.RegisterMatchFunctionServer(server, &p)
-
 }
 
 func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) error {

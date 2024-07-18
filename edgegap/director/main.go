@@ -13,6 +13,7 @@ const (
 	openMatchMatchFunctionHost = "match-function"
 	openMatchMatchFunctionPort = 50502
 	openMatchBackendService    = "open-match-backend:50505"
+
 	// Game server data
 	gameServerPort = "gameport"
 	appName        = "gameserver"

@@ -21,7 +21,7 @@ jobs:
       - name: Generate change matrix
         id: generate
         run: |
-          LIST="$(git -p show --name-only | grep '^edgegap' | sed 's/^edgegap\/\(.*\)\/.*/\1/' | sort | uniq"
+          LIST="$(git -p show --name-only | grep '^edgegap' | sed 's/^edgegap\/\(.*\)\/.*/\1/' | sort | uniq)"
           echo "functions=${LIST}" >> "$GITHUB_OUTPUT"
   docker:
     needs: [ generator ]

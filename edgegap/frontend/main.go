@@ -39,6 +39,7 @@ func createTicket(ctx echo.Context) error {
 	fmt.Println("----------------------------")
 	fmt.Printf("body: %s\n", string(body))
 	fmt.Println("----------------------------")
+
 	userTicketRequest := TicketRequestModel{}
 
 	// Bind the request JSON body to our model
