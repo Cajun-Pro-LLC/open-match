@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -32,20 +33,15 @@ func createTicket(ctx echo.Context) error {
 	// Get The player IP. This will be used later to make a call at Arbitrium (Edgegap's solution)
 	echoServer := ctx.Echo()
 	request := ctx.Request()
-
 	playerIP := echoServer.IPExtractor(request)
-
-	body, err := io.ReadAll(ctx.Request().Body)
-	fmt.Println("----------------------------")
-	fmt.Printf("body: %s\n", string(body))
-	fmt.Println("----------------------------")
 
 	userTicketRequest := TicketRequestModel{}
 
 	// Bind the request JSON body to our model
-	err = ctx.Bind(&userTicketRequest)
+	err := ctx.Bind(&userTicketRequest)
 	if err != nil {
-		panic("Request Payload didn't match TicketRequestModel attributes")
+		log.Println("Request Payload didn't match TicketRequestModel attributes")
+		return NewError(ctx, http.StatusBadRequest)
 	}
 
 	service, conn := getFrontendServiceClient()
@@ -88,15 +84,16 @@ func createTicket(ctx echo.Context) error {
 		log.Printf("Error checking for existing ticket: %v", err.Error())
 	}
 	if existingTicket != nil {
-		return ctx.JSON(http.StatusOK, existingTicket)
+		return NewResponse(ctx, existingTicket)
 	}
 
 	ticket, err := service.CreateTicket(context.Background(), req)
 	if err != nil {
 		log.Printf("Was not able to create a ticket, err: %s\n", err.Error())
+		return NewError(ctx, http.StatusInternalServerError)
 	}
 
-	return ctx.JSON(http.StatusOK, ticket)
+	return NewResponse(ctx, ticket)
 }
 
 func getExistingTicket(playerId string) (*pb.Ticket, error) {
@@ -163,8 +160,8 @@ func getQueryServiceClient() (pb.QueryServiceClient, *grpc.ClientConn) {
 	return pb.NewQueryServiceClient(conn), conn
 }
 
-func getTicket(echoContext echo.Context) error {
-	ticketID := echoContext.Param("ticketId")
+func getTicket(ctx echo.Context) error {
+	ticketID := ctx.Param("ticketId")
 
 	service, conn := getFrontendServiceClient()
 	defer func() {
@@ -174,21 +171,17 @@ func getTicket(echoContext echo.Context) error {
 		}
 	}()
 
-	req := &pb.GetTicketRequest{
-		TicketId: ticketID,
-	}
-
-	ticket, err := service.GetTicket(context.Background(), req)
+	ticket, err := service.GetTicket(context.Background(), &pb.GetTicketRequest{TicketId: ticketID})
 	if err != nil {
 		log.Printf("Was not able to get a ticket, err: %s\n", err.Error())
-		return echo.NewHTTPError(http.StatusNotFound, "Resource not found")
+		return NewError(ctx, http.StatusNotFound)
 	}
 
-	return echoContext.JSON(http.StatusOK, ticket)
+	return NewResponse(ctx, ticket)
 }
 
-func deleteTicket(echoContext echo.Context) error {
-	ticketID := echoContext.Param("ticketId")
+func deleteTicket(ctx echo.Context) error {
+	ticketID := ctx.Param("ticketId")
 
 	service, conn := getFrontendServiceClient()
 	defer func() {
@@ -198,24 +191,20 @@ func deleteTicket(echoContext echo.Context) error {
 		}
 	}()
 
-	req := &pb.DeleteTicketRequest{
-		TicketId: ticketID,
-	}
-
-	_, err := service.DeleteTicket(context.Background(), req)
-
+	_, err := service.DeleteTicket(context.Background(), &pb.DeleteTicketRequest{TicketId: ticketID})
 	if err != nil {
 		fmt.Printf("Was not able to delete a ticket, err: %s\n", err.Error())
-		return echo.NewHTTPError(http.StatusNotFound, "Resource not found")
+		return NewError(ctx, http.StatusNotFound)
 	}
 
-	return echoContext.JSON(http.StatusOK, pb.Ticket{Id: ticketID})
+	return NewResponse(ctx, pb.Ticket{Id: ticketID})
 }
 
 func main() {
 	fmt.Println("Starting Frontend Service...")
 
 	e := echo.New()
+	e.Use(middleware.RequestID())
 
 	// How to extract IP
 	e.IPExtractor = echo.ExtractIPDirect()
