@@ -26,20 +26,23 @@ type TicketRequestModel struct {
 }
 
 // Create a ticket by communicating with Open Match core Front End service
-func createTicket(echoContext echo.Context) error {
+func createTicket(ctx echo.Context) error {
 	log.Println("Creating ticket...")
 
 	// Get The player IP. This will be used later to make a call at Arbitrium (Edgegap's solution)
-	echoServer := echoContext.Echo()
-	request := echoContext.Request()
+	echoServer := ctx.Echo()
+	request := ctx.Request()
 
 	playerIP := echoServer.IPExtractor(request)
 
+	body, err := io.ReadAll(ctx.Request().Body)
+	fmt.Println("----------------------------")
+	fmt.Printf("body: %s\n", string(body))
+	fmt.Println("----------------------------")
 	userTicketRequest := TicketRequestModel{}
 
 	// Bind the request JSON body to our model
-	err := echoContext.Bind(&userTicketRequest)
-
+	err = ctx.Bind(&userTicketRequest)
 	if err != nil {
 		panic("Request Payload didn't match TicketRequestModel attributes")
 	}
@@ -84,7 +87,7 @@ func createTicket(echoContext echo.Context) error {
 		log.Printf("Error checking for existing ticket: %v", err.Error())
 	}
 	if existingTicket != nil {
-		return echoContext.JSON(http.StatusOK, existingTicket)
+		return ctx.JSON(http.StatusOK, existingTicket)
 	}
 
 	ticket, err := service.CreateTicket(context.Background(), req)
@@ -92,7 +95,7 @@ func createTicket(echoContext echo.Context) error {
 		log.Printf("Was not able to create a ticket, err: %s\n", err.Error())
 	}
 
-	return echoContext.JSON(http.StatusOK, ticket)
+	return ctx.JSON(http.StatusOK, ticket)
 }
 
 func getExistingTicket(playerId string) (*pb.Ticket, error) {

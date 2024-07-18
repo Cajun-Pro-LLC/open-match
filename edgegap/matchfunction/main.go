@@ -29,7 +29,7 @@ type processor struct {
 func newProcessor(server *grpc.Server) {
 	conn, err := grpc.NewClient(openMatchQueryService, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("Error while creating gRPC connection, err: %v", err.Error())
+		log.Fatal(GRPCConnectionError)
 	}
 
 	p := processor{client: pb.NewQueryServiceClient(conn)}
