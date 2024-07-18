@@ -6,9 +6,9 @@ import (
 )
 
 type Response struct {
-	RequestId string      `json:"RequestId"`
-	Data      interface{} `json:"Data,omitempty"`
-	Error     string      `json:"Error,omitempty"`
+	RequestId string      `json:"request_id"`
+	Data      interface{} `json:"data,omitempty"`
+	Error     string      `json:"error,omitempty"`
 }
 
 type Context struct {
