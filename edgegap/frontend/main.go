@@ -107,6 +107,7 @@ func getExistingTicket(playerId string) (*pb.Ticket, error) {
 			log.Printf("Error closing query service client connection: %v\n", closeErr.Error())
 		}
 	}()
+
 	req := &pb.QueryTicketsRequest{
 		Pool: &pb.Pool{
 			StringEqualsFilters: []*pb.StringEqualsFilter{

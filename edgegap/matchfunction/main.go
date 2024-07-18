@@ -53,6 +53,7 @@ func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) e
 			deleteTickets(expiredTickets)
 		}()
 	}
+
 	// Generate proposals.
 	proposals, err := findMatchProposals(req.GetProfile(), poolTickets)
 	if err != nil {

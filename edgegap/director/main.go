@@ -61,6 +61,7 @@ func processMatches(wg *sync.WaitGroup, profile *pb.MatchProfile, backend *Backe
 		log.Printf("Failed to fetch matches for profile %v, got %s", profile.GetName(), err.Error())
 		return
 	}
+
 	log.Printf("Generated %v matches for profile %v", len(matches), profile.GetName())
 	errors := deployGameserversForMatches(matches, backend)
 	if errors != nil {
