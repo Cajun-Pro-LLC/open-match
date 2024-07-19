@@ -15,6 +15,10 @@ type Context struct {
 	echo.Context
 }
 
+func (c *Context) RespondErrorCustom(code int, err string) error {
+	return c.JSON(code, Response{RequestId: c.Response().Header().Get(echo.HeaderXRequestID), Error: err})
+}
+
 func (c *Context) RespondError(code int) error {
 	return c.JSON(code, Response{RequestId: c.Response().Header().Get(echo.HeaderXRequestID), Error: http.StatusText(code)})
 }

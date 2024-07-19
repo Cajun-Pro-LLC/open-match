@@ -91,7 +91,7 @@ func createTicket(ctx echo.Context) error {
 	ticket, err := service.CreateTicket(context.Background(), req)
 	if err != nil {
 		log.Printf("Was not able to create a ticket, err: %s\n", err.Error())
-		return c.RespondError(http.StatusInternalServerError)
+		return c.RespondErrorCustom(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.Respond(ticket)
