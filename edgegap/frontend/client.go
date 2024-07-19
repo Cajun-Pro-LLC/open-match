@@ -14,6 +14,7 @@ var openMatchFrontendService = fmt.Sprintf("%s:%s", os.Getenv("OM_FRONTEND_HOST"
 
 // Get an object that can communicate with OpenMatch Frontend service.
 func getFrontendServiceClient() (pb.FrontendServiceClient, *grpc.ClientConn) {
+	fmt.Printf("Creating grpc client for FrontendService at %s\n", openMatchFrontendService)
 	conn, err := grpc.NewClient(openMatchFrontendService, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, nil
@@ -31,6 +32,7 @@ func getQueryServiceClient() (pb.QueryServiceClient, *grpc.ClientConn) {
 	host := os.Getenv(fmt.Sprintf("%s_MMF_SVC_PORT_%s_TCP_ADDR", upper, httpPort))
 	port := os.Getenv(fmt.Sprintf("%s_MMF_SVC_SERVICE_PORT_GRPC", upper))
 	openMatchQueryService := fmt.Sprintf("%s:%s", host, port)
+	fmt.Printf("Creating grpc client for QueryService at %s\n", openMatchQueryService)
 	conn, err := grpc.NewClient(openMatchQueryService, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(fmt.Sprintf("Could not dial Open Match Query Client service via gRPC, err: %v", err.Error()))

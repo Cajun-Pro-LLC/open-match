@@ -164,6 +164,7 @@ func main() {
 	fmt.Println("Starting MatchFunction Service...")
 
 	s := grpc.NewServer()
+	fmt.Printf("Creating grpc client for QueryService at %s\n", openMatchQueryService)
 	conn, err := grpc.NewClient(openMatchQueryService, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(fmt.Sprintf("Could not dial Open Match Query Client service via gRPC, err: %v", err.Error()))
