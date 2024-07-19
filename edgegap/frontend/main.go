@@ -152,7 +152,7 @@ func getFrontendServiceClient() (pb.FrontendServiceClient, *grpc.ClientConn, err
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not dial Open Match Frontend service via gRPC, err: %s", err.Error())
 	}
-
+	conn.Connect()
 	return pb.NewFrontendServiceClient(conn), conn, nil
 }
 
@@ -183,7 +183,7 @@ func getTicket(ctx echo.Context) error {
 	ticket, err := service.GetTicket(context.Background(), &pb.GetTicketRequest{TicketId: ticketID})
 	if err != nil {
 		log.Printf("Was not able to get a ticket, err: %s\n", err.Error())
-		return c.RespondError(http.StatusNotFound)
+		return c.RespondErrorCustom(http.StatusNotFound, "Ticket not found")
 	}
 
 	return c.Respond(ticket)
@@ -208,7 +208,7 @@ func deleteTicket(ctx echo.Context) error {
 	_, err = service.DeleteTicket(context.Background(), &pb.DeleteTicketRequest{TicketId: ticketID})
 	if err != nil {
 		fmt.Printf("Was not able to delete a ticket, err: %s\n", err.Error())
-		return c.RespondError(http.StatusNotFound)
+		return c.RespondErrorCustom(http.StatusNotFound, "Ticket not found")
 	}
 
 	return c.Respond(pb.Ticket{Id: ticketID})
