@@ -5,18 +5,12 @@ import (
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/anypb"
 	"io"
 	"log"
 	"net/http"
 	"open-match.dev/open-match/pkg/pb"
 	"os"
-)
-
-const (
-	openMatchQueryService = "open-match-query-client:12345"
 )
 
 // TicketRequestModel represent the model that we should receive for our create ticket endpoint
@@ -32,9 +26,8 @@ func createTicket(ctx echo.Context) error {
 	log.Println("Creating ticket...")
 
 	// Get The player IP. This will be used later to make a call at Arbitrium (Edgegap's solution)
-	echoServer := c.Echo()
 	request := c.Request()
-	playerIP := echoServer.IPExtractor(request)
+	playerIP := c.Echo().IPExtractor(request)
 
 	userTicketRequest := TicketRequestModel{}
 
@@ -79,14 +72,14 @@ func createTicket(ctx echo.Context) error {
 			},
 		},
 	}
-	// Commented out until edgegap opens up ports.
-	// existingTicket, err := getExistingTicket(userTicketRequest.PlayerId)
-	// if err != nil {
-	// 	log.Printf("Error checking for existing ticket: %v", err.Error())
-	// }
-	// if existingTicket != nil {
-	// 	return c.Respond(existingTicket)
-	// }
+
+	existingTicket, err := getExistingTicket(userTicketRequest.PlayerId)
+	if err != nil {
+		log.Printf("Error checking for existing ticket: %v", err.Error())
+	}
+	if existingTicket != nil {
+		return c.Respond(existingTicket)
+	}
 
 	ticket, err := service.CreateTicket(context.Background(), req)
 	if err != nil {
@@ -140,24 +133,6 @@ func getExistingTicket(playerId string) (*pb.Ticket, error) {
 		}
 	}
 	return nil, nil
-}
-
-// Get an object that can communicate with Open Match Front End service.
-func getFrontendServiceClient() (pb.FrontendServiceClient, *grpc.ClientConn) {
-	conn, err := grpc.NewClient(fmt.Sprintf("%s:%s", os.Getenv("OM_FRONTEND_HOST"), os.Getenv("OM_FRONTEND_GRPC_PORT")), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, nil
-	}
-	return pb.NewFrontendServiceClient(conn), conn
-}
-
-// Get an object that can communicate with Open Match Front End service.
-func getQueryServiceClient() (pb.QueryServiceClient, *grpc.ClientConn) {
-	conn, err := grpc.NewClient(openMatchQueryService, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(fmt.Sprintf("Could not dial Open Match Query Client service via gRPC, err: %v", err.Error()))
-	}
-	return pb.NewQueryServiceClient(conn), conn
 }
 
 func getTicket(ctx echo.Context) error {
