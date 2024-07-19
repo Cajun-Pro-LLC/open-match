@@ -16,8 +16,7 @@ import (
 )
 
 const (
-	openMatchFrontendService = "open-match-frontend:50504"
-	openMatchQueryService    = "open-match-query-client:12345"
+	openMatchQueryService = "open-match-query-client:12345"
 )
 
 // TicketRequestModel represent the model that we should receive for our create ticket endpoint
@@ -46,11 +45,7 @@ func createTicket(ctx echo.Context) error {
 		return c.RespondError(http.StatusBadRequest)
 	}
 
-	service, conn, err := getFrontendServiceClient()
-	if err != nil {
-		return c.RespondErrorCustom(http.StatusInternalServerError, err.Error())
-	}
-
+	service, conn := getFrontendServiceClient()
 	defer func() {
 		closeErr := conn.Close()
 		if closeErr != nil {
@@ -148,15 +143,12 @@ func getExistingTicket(playerId string) (*pb.Ticket, error) {
 }
 
 // Get an object that can communicate with Open Match Front End service.
-func getFrontendServiceClient() (pb.FrontendServiceClient, *grpc.ClientConn, error) {
-	service := fmt.Sprintf("%s:%s", os.Getenv("OM_FRONTEND_HOST"), os.Getenv("OM_FRONTEND_GRPC_PORT"))
-	fmt.Printf("Attempting to connect to %s\n", service)
-	conn, err := grpc.NewClient(service, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func getFrontendServiceClient() (pb.FrontendServiceClient, *grpc.ClientConn) {
+	conn, err := grpc.NewClient(fmt.Sprintf("%s:%s", os.Getenv("OM_FRONTEND_HOST"), os.Getenv("OM_FRONTEND_GRPC_PORT")), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not dial Open Match Frontend service via gRPC, err: %s", err.Error())
+		return nil, nil
 	}
-	conn.Connect()
-	return pb.NewFrontendServiceClient(conn), conn, nil
+	return pb.NewFrontendServiceClient(conn), conn
 }
 
 // Get an object that can communicate with Open Match Front End service.
@@ -172,10 +164,7 @@ func getTicket(ctx echo.Context) error {
 	c := ctx.(*Context)
 	ticketID := c.Param("ticketId")
 
-	service, conn, err := getFrontendServiceClient()
-	if err != nil {
-		return c.RespondErrorCustom(http.StatusInternalServerError, err.Error())
-	}
+	service, conn := getFrontendServiceClient()
 	defer func() {
 		closeErr := conn.Close()
 		if closeErr != nil {
@@ -196,11 +185,7 @@ func deleteTicket(ctx echo.Context) error {
 	c := ctx.(*Context)
 	ticketID := c.Param("ticketId")
 
-	service, conn, err := getFrontendServiceClient()
-	if err != nil {
-		return c.RespondErrorCustom(http.StatusInternalServerError, err.Error())
-	}
-
+	service, conn := getFrontendServiceClient()
 	defer func() {
 		closeErr := conn.Close()
 		if closeErr != nil {
@@ -208,7 +193,7 @@ func deleteTicket(ctx echo.Context) error {
 		}
 	}()
 
-	_, err = service.DeleteTicket(context.Background(), &pb.DeleteTicketRequest{TicketId: ticketID})
+	_, err := service.DeleteTicket(context.Background(), &pb.DeleteTicketRequest{TicketId: ticketID})
 	if err != nil {
 		fmt.Printf("Was not able to delete a ticket, err: %s\n", err.Error())
 		return c.RespondErrorCustom(http.StatusNotFound, "Ticket not found")
