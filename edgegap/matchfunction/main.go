@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"open-match.dev/open-match/pkg/matchfunction"
+	"os"
 	"sync"
 	"time"
 
@@ -160,6 +161,12 @@ func getFrontendServiceClient() (pb.FrontendServiceClient, *grpc.ClientConn) {
 }
 
 func main() {
+	if os.Getenv("SHOW_ENV") == "true" {
+		fmt.Println("Environment Variables:")
+		for _, e := range os.Environ() {
+			fmt.Println(e)
+		}
+	}
 	fmt.Println("Starting MatchFunction Service...")
 
 	server := grpc.NewServer()

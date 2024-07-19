@@ -12,10 +12,11 @@ import (
 	"log"
 	"net/http"
 	"open-match.dev/open-match/pkg/pb"
+	"os"
 )
 
 const (
-	openMatchFrontendService = "open-match-frontend:51504"
+	openMatchFrontendService = "open-match-frontend:50504"
 	openMatchQueryService    = "open-match-query-client:12345"
 )
 
@@ -214,6 +215,12 @@ func deleteTicket(ctx echo.Context) error {
 	return c.Respond(pb.Ticket{Id: ticketID})
 }
 func main() {
+	if os.Getenv("SHOW_ENV") == "true" {
+		fmt.Println("Environment Variables:")
+		for _, e := range os.Environ() {
+			fmt.Println(e)
+		}
+	}
 	fmt.Println("Starting Frontend Service...")
 
 	e := echo.New()

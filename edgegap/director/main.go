@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"sync"
 
 	"fmt"
@@ -18,7 +19,6 @@ const (
 	gameServerPort = "gameport"
 	appName        = "gameserver"
 	appVersion     = "v1.0.0"
-	arbitriumAPI   = "https://staging-api.edgegap.com/"
 )
 
 func deployMatchGameserver(m *pb.Match) (*Gameserver, error) {
@@ -73,6 +73,12 @@ func processMatches(wg *sync.WaitGroup, profile *pb.MatchProfile, backend *Backe
 }
 
 func main() {
+	if os.Getenv("SHOW_ENV") == "true" {
+		fmt.Println("Environment Variables:")
+		for _, e := range os.Environ() {
+			fmt.Println(e)
+		}
+	}
 	fmt.Println("Starting Director Service...")
 	backend, err := NewBackend()
 	if err != nil {

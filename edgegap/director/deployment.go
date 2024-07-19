@@ -7,8 +7,16 @@ import (
 	swagger "github.com/cajun-pro-llc/edgegap-swagger"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
+
+const (
+	arbitriumStagingAPI   = "https://staging-api.edgegap.com/"
+	arbitrumProductionAPI = "https://api.edgegap.com/"
+)
+
+var dev = strings.Trim(strings.ToLower(os.Getenv("DEV_MODE")), "") == "true"
 
 type Arbitrum struct {
 	client *swagger.APIClient
@@ -18,7 +26,10 @@ type Arbitrum struct {
 func newArbitrum() *Arbitrum {
 	// Creating API Client to communicate with arbitrium
 	configuration := swagger.NewConfiguration()
-	configuration.BasePath = arbitriumAPI
+	configuration.BasePath = arbitrumProductionAPI
+	if dev {
+		configuration.BasePath = arbitriumStagingAPI
+	}
 	return &Arbitrum{
 		client: swagger.NewAPIClient(configuration),
 		ctx: context.WithValue(context.Background(), swagger.ContextAPIKey, swagger.APIKey{
