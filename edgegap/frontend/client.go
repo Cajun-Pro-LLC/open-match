@@ -25,9 +25,9 @@ func getFrontendServiceClient() (pb.FrontendServiceClient, *grpc.ClientConn) {
 // Get an object that can communicate with OpenMatch Query service.
 func getQueryServiceClient() (pb.QueryServiceClient, *grpc.ClientConn) {
 	r := regexp.MustCompile(`-(custom-frontend|mmf|director)-[a-z0-9]+-[a-z0-9]+$`)
-	underlined := strings.ReplaceAll(os.Getenv("HOSTNAME"), "-", "_")
-	prefix := r.ReplaceAllString(underlined, "")
-	upper := strings.ToUpper(prefix)
+	prefix := r.ReplaceAllString(os.Getenv("HOSTNAME"), "")
+	underlined := strings.ReplaceAll(prefix, "-", "_")
+	upper := strings.ToUpper(underlined)
 	httpPort := os.Getenv(fmt.Sprintf("%s_MMF_SVC_SERVICE_PORT_HTTP", upper))
 	host := os.Getenv(fmt.Sprintf("%s_MMF_SVC_PORT_%s_TCP_ADDR", upper, httpPort))
 	port := os.Getenv(fmt.Sprintf("%s_MMF_SVC_SERVICE_PORT_GRPC", upper))

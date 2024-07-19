@@ -134,9 +134,9 @@ func deleteTickets(tickets []*pb.Ticket) {
 
 func deleteTicket(ticketId string) error {
 	r := regexp.MustCompile(`-(custom-frontend|mmf|director)-[a-z0-9]+-[a-z0-9]+$`)
-	underlined := strings.ReplaceAll(os.Getenv("HOSTNAME"), "-", "_")
-	prefix := r.ReplaceAllString(underlined, "")
-	upper := strings.ToUpper(prefix)
+	prefix := r.ReplaceAllString(os.Getenv("HOSTNAME"), "")
+	underlined := strings.ReplaceAll(prefix, "-", "_")
+	upper := strings.ToUpper(underlined)
 	host := os.Getenv(fmt.Sprintf("%s_CUSTOM_FRONTEND_SVC_SERVICE_HOST", upper))
 	url := fmt.Sprintf("http://%s:51504/v1/tickets/%s", host, ticketId)
 
