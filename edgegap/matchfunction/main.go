@@ -1,13 +1,15 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"net"
+	"net/http"
 	"open-match.dev/open-match/pkg/matchfunction"
 	"os"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,25 +18,14 @@ import (
 )
 
 const (
-	matchFunctionServePort   = 50502
-	matchName                = "match-function"
-	openMatchQueryService    = "open-match-query:50503"
-	openMatchFrontendService = "open-match-frontend:51504"
-	maxTicketTTL             = 600
+	matchName    = "match-function"
+	maxTicketTTL = 600
 )
+
+var openMatchQueryService = fmt.Sprintf("%s:%s", os.Getenv("OM_QUERY_HOST"), os.Getenv("OM_QUERY_GRPC_PORT"))
 
 type processor struct {
 	client pb.QueryServiceClient
-}
-
-func newProcessor(server *grpc.Server) {
-	conn, err := grpc.NewClient(openMatchQueryService, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatal(GRPCConnectionError)
-	}
-
-	p := processor{client: pb.NewQueryServiceClient(conn)}
-	pb.RegisterMatchFunctionServer(server, &p)
 }
 
 func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) error {
@@ -126,22 +117,12 @@ func findExpiredTickets(poolTickets map[string][]*pb.Ticket) []*pb.Ticket {
 }
 
 func deleteTickets(tickets []*pb.Ticket) {
-	service, conn := getFrontendServiceClient()
-	defer func() {
-		closeErr := conn.Close()
-		if closeErr != nil {
-			log.Printf("Failed to close frontend connection: %s\n", closeErr.Error())
-		}
-	}()
-
 	var wg sync.WaitGroup
 	for _, ticket := range tickets {
 		wg.Add(1)
 		go func(ticket *pb.Ticket) {
 			defer wg.Done()
-
-			req := &pb.DeleteTicketRequest{TicketId: ticket.GetId()}
-			_, err := service.DeleteTicket(context.Background(), req)
+			err := deleteTicket(ticket.GetId())
 			if err != nil {
 				fmt.Printf("Was not able to delete a ticket, err: %s\n", err.Error())
 			}
@@ -151,13 +132,25 @@ func deleteTickets(tickets []*pb.Ticket) {
 	wg.Wait()
 }
 
-func getFrontendServiceClient() (pb.FrontendServiceClient, *grpc.ClientConn) {
-	conn, err := grpc.NewClient(openMatchFrontendService, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func deleteTicket(ticketId string) error {
+	r := regexp.MustCompile(`-(custom-frontend|mmf|director)-[a-z0-9]+-[a-z0-9]+$`)
+	underlined := strings.ReplaceAll(os.Getenv("HOSTNAME"), "-", "_")
+	prefix := r.ReplaceAllString(underlined, "")
+	upper := strings.ToUpper(prefix)
+	host := os.Getenv(fmt.Sprintf("%s_CUSTOM_FRONTEND_SVC_SERVICE_HOST", upper))
+	url := fmt.Sprintf("http://%s:51504/v1/tickets/%s", host, ticketId)
+
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
-		panic(fmt.Sprintf("Could not dial Open Match Frontend service via gRPC, err: %v", err.Error()))
+		return err
 	}
 
-	return pb.NewFrontendServiceClient(conn), conn
+	_, err = client.Do(req)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func main() {
@@ -167,19 +160,40 @@ func main() {
 			fmt.Println(e)
 		}
 	}
+
 	fmt.Println("Starting MatchFunction Service...")
 
-	server := grpc.NewServer()
-	newProcessor(server)
-
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", matchFunctionServePort))
+	s := grpc.NewServer()
+	conn, err := grpc.NewClient(openMatchQueryService, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("TCP net listener initialization failed for port %v, got %s", 50502, err.Error())
+		panic(fmt.Sprintf("Could not dial Open Match Query Client service via gRPC, err: %v", err.Error()))
 	}
 
-	log.Printf("TCP net listener initialized for port %v", matchFunctionServePort)
+	defer func() {
+		closeErr := conn.Close()
+		if closeErr != nil {
+			log.Printf("Error closing queryClient connection: %v\n", closeErr.Error())
+		}
+	}()
 
-	err = server.Serve(listener)
+	// Register Query Service Server & Match Function Server
+	client := pb.NewQueryServiceClient(conn)
+	pb.RegisterQueryServiceServer(s, &server{
+		client: client,
+	})
+	pb.RegisterMatchFunctionServer(s, &processor{
+		client: client,
+	})
+
+	port := os.Getenv("GRPC_SERVE_PORT") // defaults to 50502
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+	if err != nil {
+		log.Fatalf("TCP net listener initialization failed for port %s, got %s", port, err.Error())
+	}
+
+	log.Printf("TCP net listener initialized for port %v", port)
+
+	err = s.Serve(listener)
 	if err != nil {
 		log.Fatalf("gRPC serve failed, got %s", err.Error())
 	}
