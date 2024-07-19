@@ -67,9 +67,7 @@ jobs:
           annotations: |
             org.opencontainers.image.title=${{ matrix.function }}
             org.opencontainers.image.description=Microservice ${{ matrix.function }} for Edgegap OpenMatch
-            org.opencontainers.image.vendor=Cajun Pro LLC
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            org.opencontainers.image.vendor=Cajun Pro LLC         
 
       - name: Build and push Docker image
         id: push
