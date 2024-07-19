@@ -45,7 +45,11 @@ func createTicket(ctx echo.Context) error {
 		return c.RespondError(http.StatusBadRequest)
 	}
 
-	service, conn := getFrontendServiceClient()
+	service, conn, err := getFrontendServiceClient()
+	if err != nil {
+		return c.RespondErrorCustom(http.StatusInternalServerError, err.Error())
+	}
+
 	defer func() {
 		closeErr := conn.Close()
 		if closeErr != nil {
@@ -143,13 +147,13 @@ func getExistingTicket(playerId string) (*pb.Ticket, error) {
 }
 
 // Get an object that can communicate with Open Match Front End service.
-func getFrontendServiceClient() (pb.FrontendServiceClient, *grpc.ClientConn) {
+func getFrontendServiceClient() (pb.FrontendServiceClient, *grpc.ClientConn, error) {
 	conn, err := grpc.NewClient(openMatchFrontendService, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		panic(fmt.Sprintf("Could not dial Open Match Frontend service via gRPC, err: %v", err.Error()))
+		return nil, nil, fmt.Errorf("could not dial Open Match Frontend service via gRPC, err: %s", err.Error())
 	}
 
-	return pb.NewFrontendServiceClient(conn), conn
+	return pb.NewFrontendServiceClient(conn), conn, nil
 }
 
 // Get an object that can communicate with Open Match Front End service.
@@ -165,7 +169,10 @@ func getTicket(ctx echo.Context) error {
 	c := ctx.(*Context)
 	ticketID := c.Param("ticketId")
 
-	service, conn := getFrontendServiceClient()
+	service, conn, err := getFrontendServiceClient()
+	if err != nil {
+		return c.RespondErrorCustom(http.StatusInternalServerError, err.Error())
+	}
 	defer func() {
 		closeErr := conn.Close()
 		if closeErr != nil {
@@ -186,7 +193,11 @@ func deleteTicket(ctx echo.Context) error {
 	c := ctx.(*Context)
 	ticketID := c.Param("ticketId")
 
-	service, conn := getFrontendServiceClient()
+	service, conn, err := getFrontendServiceClient()
+	if err != nil {
+		return c.RespondErrorCustom(http.StatusInternalServerError, err.Error())
+	}
+
 	defer func() {
 		closeErr := conn.Close()
 		if closeErr != nil {
@@ -194,7 +205,7 @@ func deleteTicket(ctx echo.Context) error {
 		}
 	}()
 
-	_, err := service.DeleteTicket(context.Background(), &pb.DeleteTicketRequest{TicketId: ticketID})
+	_, err = service.DeleteTicket(context.Background(), &pb.DeleteTicketRequest{TicketId: ticketID})
 	if err != nil {
 		fmt.Printf("Was not able to delete a ticket, err: %s\n", err.Error())
 		return c.RespondError(http.StatusNotFound)
