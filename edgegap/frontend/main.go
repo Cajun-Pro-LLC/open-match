@@ -79,14 +79,14 @@ func createTicket(ctx echo.Context) error {
 			},
 		},
 	}
-
-	existingTicket, err := getExistingTicket(userTicketRequest.PlayerId)
-	if err != nil {
-		log.Printf("Error checking for existing ticket: %v", err.Error())
-	}
-	if existingTicket != nil {
-		return c.Respond(existingTicket)
-	}
+	// Commented out until edgegap opens up ports.
+	// existingTicket, err := getExistingTicket(userTicketRequest.PlayerId)
+	// if err != nil {
+	// 	log.Printf("Error checking for existing ticket: %v", err.Error())
+	// }
+	// if existingTicket != nil {
+	// 	return c.Respond(existingTicket)
+	// }
 
 	ticket, err := service.CreateTicket(context.Background(), req)
 	if err != nil {
