@@ -8,6 +8,8 @@ import (
 	"io"
 	"log"
 	"open-match.dev/open-match/pkg/pb"
+	"os"
+	"strconv"
 )
 
 type Backend struct {
@@ -15,12 +17,13 @@ type Backend struct {
 }
 
 func NewBackend() (*Backend, error) {
-
+	openMatchBackendService := fmt.Sprintf("%s:%s", os.Getenv("OM_BACKEND_HOST"), os.Getenv("OM_BACKEND_GRPC_PORT"))
 	backend := &Backend{}
-	err := backend.connect(openMatchBackendService)
+	conn, err := grpc.NewClient(openMatchBackendService, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return nil, err
+		return backend, fmt.Errorf("error while communicating with Open Match Backend, err: %v", err.Error())
 	}
+	backend.client = pb.NewBackendServiceClient(conn)
 	return backend, nil
 }
 
@@ -43,22 +46,14 @@ func (b *Backend) DeployGameserversForMatches(matches []*pb.Match) []error {
 	return nil
 }
 
-func (b *Backend) connect(service string) error {
-	conn, err := grpc.NewClient(service, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return fmt.Errorf("error while communicating with Open Match Backend, err: %v", err.Error())
-	}
-	b.client = pb.NewBackendServiceClient(conn)
-	return nil
-}
-
 // Fetch profile's matches
 func (b *Backend) fetchMatchesForProfile(p *pb.MatchProfile) ([]*pb.Match, error) {
 	// Making request object
+	port, _ := strconv.Atoi(os.Getenv("OM_MMF_GRPC_PORT"))
 	req := &pb.FetchMatchesRequest{
 		Config: &pb.FunctionConfig{
-			Host: openMatchMatchFunctionHost,
-			Port: openMatchMatchFunctionPort,
+			Host: os.Getenv("OM_MMF_HOST"),
+			Port: int32(port),
 			Type: pb.FunctionConfig_GRPC,
 		},
 		Profile: p,
