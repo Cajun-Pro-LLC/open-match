@@ -149,7 +149,9 @@ func getExistingTicket(playerId string) (*pb.Ticket, error) {
 
 // Get an object that can communicate with Open Match Front End service.
 func getFrontendServiceClient() (pb.FrontendServiceClient, *grpc.ClientConn, error) {
-	conn, err := grpc.NewClient(openMatchFrontendService, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	service := fmt.Sprintf("%s:%s", os.Getenv("OM_FRONTEND_HOST"), os.Getenv("OM_FRONTEND_GRPC_PORT"))
+	fmt.Printf("Attempting to connect to %s\n", service)
+	conn, err := grpc.NewClient(service, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not dial Open Match Frontend service via gRPC, err: %s", err.Error())
 	}
@@ -248,5 +250,6 @@ func main() {
 	// Delete a ticket
 	tickets.DELETE("/:ticketId", deleteTicket)
 
-	e.Logger.Fatal(e.Start(":51504"))
+	// Serve on the edgegap environment variable defined port
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("HTTP_SERVE_PORT"))))
 }
