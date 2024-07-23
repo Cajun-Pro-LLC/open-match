@@ -15,9 +15,12 @@ import (
 
 // TicketRequestModel represent the model that we should receive for our create ticket endpoint
 type TicketRequestModel struct {
-	Category string
-	Mode     string
-	PlayerId string
+	ProfileId   string `json:"edgegap_profile_id"`
+	PlayerId    string `json:"player_id"`
+	Matchmaking struct {
+		Selectors []string          `json:"selector_data"`
+		Filters   map[string]string `json:"filter_data"`
+	} `json:"matchmaking_data"`
 }
 
 // Create a ticket by communicating with Open Match core Front End service
@@ -46,17 +49,28 @@ func createTicket(ctx echo.Context) error {
 		}
 	}()
 
+	searchFields := &pb.SearchFields{
+		StringArgs: map[string]string{
+			"playerId": userTicketRequest.PlayerId,
+		},
+		Tags: []string{},
+	}
+	if userTicketRequest.ProfileId != "" {
+		searchFields.Tags = append(searchFields.Tags, userTicketRequest.ProfileId)
+	}
+	if len(userTicketRequest.Matchmaking.Selectors) > 0 {
+		for _, value := range userTicketRequest.Matchmaking.Selectors {
+			searchFields.Tags = append(searchFields.Tags, value)
+		}
+	}
+	if len(userTicketRequest.Matchmaking.Filters) > 0 {
+		for key, value := range userTicketRequest.Matchmaking.Filters {
+			searchFields.StringArgs[key] = value
+		}
+	}
 	req := &pb.CreateTicketRequest{
 		Ticket: &pb.Ticket{
-			SearchFields: &pb.SearchFields{
-				// Tags can support multiple values but for simplicity, the demo function
-				// assumes only single mode selection per Ticket.
-				Tags: []string{
-					userTicketRequest.Category,
-					userTicketRequest.Mode,
-				},
-				StringArgs: map[string]string{"playerId": userTicketRequest.PlayerId},
-			},
+			SearchFields: searchFields,
 			Extensions: map[string]*anypb.Any{
 				// Adding player IP to create the game server later using Arbitrium (Edgegap's solution)
 				// You can add other values in extensions. Those values will be ignored by Open Match. They are meant tu use by the developer.
