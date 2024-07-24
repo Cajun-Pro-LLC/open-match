@@ -1,7 +1,6 @@
 package main
 
 import (
-	"director/config"
 	"fmt"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -10,7 +9,7 @@ import (
 	"open-match.dev/open-match/pkg/pb"
 )
 
-func buildPools(profile *config.MatchmakerProfile, matchProfiles *[]*pb.MatchProfile, tempProfile []*pb.Pool, index int) {
+func buildPools(profile *MatchmakerProfile, matchProfiles *[]*pb.MatchProfile, tempProfile []*pb.Pool, index int) {
 	if index == len(profile.Selectors) {
 		pools := make([]*pb.Pool, len(tempProfile))
 		copy(pools, tempProfile)
@@ -49,7 +48,7 @@ func buildPools(profile *config.MatchmakerProfile, matchProfiles *[]*pb.MatchPro
 	}
 }
 
-func buildMatchmakerProfile(profile *config.MatchmakerProfile) []*pb.MatchProfile {
+func buildMatchmakerProfile(profile *MatchmakerProfile) []*pb.MatchProfile {
 	var matchProfiles []*pb.MatchProfile
 	playerCountPb := &wrapperspb.Int32Value{Value: profile.MatchPlayerCount}
 	playerCount, err := proto.Marshal(playerCountPb)
@@ -74,7 +73,7 @@ func buildMatchmakerProfile(profile *config.MatchmakerProfile) []*pb.MatchProfil
 	return matchProfiles
 }
 
-func buildMatchmakerProfiles(profiles []*config.MatchmakerProfile) []*pb.MatchProfile {
+func buildMatchmakerProfiles(profiles []*MatchmakerProfile) []*pb.MatchProfile {
 	var matchProfiles []*pb.MatchProfile
 	for i := range profiles {
 		matchProfiles = append(matchProfiles, buildMatchmakerProfile(profiles[i])...)

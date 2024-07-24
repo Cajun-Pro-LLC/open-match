@@ -1,7 +1,6 @@
 package main
 
 import (
-	"director/config"
 	"fmt"
 	swagger "github.com/cajun-pro-llc/edgegap-swagger"
 	"open-match.dev/open-match/pkg/pb"
@@ -70,7 +69,7 @@ func (gs *Gameserver) getDeployModel() swagger.DeployModel {
 	}
 }
 
-func (gs *Gameserver) getMatchProfile() *config.MatchmakerProfile {
+func (gs *Gameserver) getMatchProfile() *MatchmakerProfile {
 	for _, profile := range matchmaker.Config.Profiles {
 		if "profile_"+profile.Id == gs.match.GetMatchProfile() {
 			return profile
