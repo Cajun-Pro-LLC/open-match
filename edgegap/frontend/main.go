@@ -18,8 +18,8 @@ type TicketRequestModel struct {
 	ProfileId   string `json:"edgegap_profile_id"`
 	PlayerId    string `json:"player_id"`
 	Matchmaking struct {
-		Selectors []string          `json:"selector_data"`
-		Filters   map[string]string `json:"filter_data"`
+		Selectors map[string]string  `json:"selector_data"`
+		Filters   map[string]float64 `json:"filter_data"`
 	} `json:"matchmaking_data"`
 }
 
@@ -50,24 +50,12 @@ func createTicket(ctx echo.Context) error {
 	}()
 
 	searchFields := &pb.SearchFields{
-		StringArgs: map[string]string{
-			"playerId": userTicketRequest.PlayerId,
-		},
-		Tags: []string{},
+		StringArgs: userTicketRequest.Matchmaking.Selectors,
+		DoubleArgs: userTicketRequest.Matchmaking.Filters,
+		Tags:       []string{userTicketRequest.ProfileId},
 	}
-	if userTicketRequest.ProfileId != "" {
-		searchFields.Tags = append(searchFields.Tags, userTicketRequest.ProfileId)
-	}
-	if len(userTicketRequest.Matchmaking.Selectors) > 0 {
-		for _, value := range userTicketRequest.Matchmaking.Selectors {
-			searchFields.Tags = append(searchFields.Tags, value)
-		}
-	}
-	if len(userTicketRequest.Matchmaking.Filters) > 0 {
-		for key, value := range userTicketRequest.Matchmaking.Filters {
-			searchFields.StringArgs[key] = value
-		}
-	}
+	searchFields.StringArgs["playerId"] = userTicketRequest.PlayerId
+
 	req := &pb.CreateTicketRequest{
 		Ticket: &pb.Ticket{
 			SearchFields: searchFields,
