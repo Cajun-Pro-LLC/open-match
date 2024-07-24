@@ -79,7 +79,7 @@ func (a *Arbitrum) LoadConfiguration() error {
 		return err
 	}
 	fmt.Printf("Loading configuration: %v\n", resp.Configuration)
-	a.matchmaker, err = NewMatchmaker(resp.Name, resp.UpdatedAt, resp.Configuration)
+	a.matchmaker, err = NewMatchmaker(resp.Name, resp.LastUpdated, &resp.Configuration)
 	if err != nil {
 		return err
 	}

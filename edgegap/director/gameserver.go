@@ -69,7 +69,7 @@ func (gs *Gameserver) getDeployModel() swagger.DeployModel {
 	}
 }
 
-func (gs *Gameserver) getMatchProfile() *MatchmakerProfile {
+func (gs *Gameserver) getMatchProfile() *swagger.MatchmakerProfile {
 	for _, profile := range matchmaker.Config.Profiles {
 		if "profile_"+profile.Id == gs.match.GetMatchProfile() {
 			return profile

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	swagger "github.com/cajun-pro-llc/edgegap-swagger"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -9,7 +10,7 @@ import (
 	"open-match.dev/open-match/pkg/pb"
 )
 
-func buildPools(profile *MatchmakerProfile, matchProfiles *[]*pb.MatchProfile, tempProfile []*pb.Pool, index int) {
+func buildPools(profile *swagger.MatchmakerProfile, matchProfiles *[]*pb.MatchProfile, tempProfile []*pb.Pool, index int) {
 	if index == len(profile.Selectors) {
 		pools := make([]*pb.Pool, len(tempProfile))
 		copy(pools, tempProfile)
@@ -50,7 +51,7 @@ func buildPools(profile *MatchmakerProfile, matchProfiles *[]*pb.MatchProfile, t
 	}
 }
 
-func buildMatchmakerProfile(profile *MatchmakerProfile) []*pb.MatchProfile {
+func buildMatchmakerProfile(profile *swagger.MatchmakerProfile) []*pb.MatchProfile {
 	var matchProfiles []*pb.MatchProfile
 	playerCountPb := &wrapperspb.Int32Value{Value: profile.MatchPlayerCount}
 	playerCount, err := proto.Marshal(playerCountPb)
@@ -75,7 +76,7 @@ func buildMatchmakerProfile(profile *MatchmakerProfile) []*pb.MatchProfile {
 	return matchProfiles
 }
 
-func buildMatchmakerProfiles(profiles []*MatchmakerProfile) []*pb.MatchProfile {
+func buildMatchmakerProfiles(profiles []*swagger.MatchmakerProfile) []*pb.MatchProfile {
 	var matchProfiles []*pb.MatchProfile
 	for i := range profiles {
 		matchProfiles = append(matchProfiles, buildMatchmakerProfile(profiles[i])...)
