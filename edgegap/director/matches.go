@@ -47,6 +47,7 @@ func buildPools(profile *swagger.MatchmakerProfile, matchProfiles *[]*pb.MatchPr
 			},
 			CreatedAfter: timestamppb.New(matchmaker.UpdatedAt),
 		}
+		fmt.Printf("Generating pool %s\n", tempProfile[index].Name)
 		buildPools(profile, matchProfiles, tempProfile, index+1)
 	}
 }
