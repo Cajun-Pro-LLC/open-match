@@ -34,7 +34,7 @@ func buildPools(profile *swagger.MatchmakerProfile, matchProfiles *[]*pb.MatchPr
 	}
 	for _, item := range profile.Selectors[index].Items {
 		tempProfile[index] = &pb.Pool{
-			Name:               fmt.Sprintf("pool_%s_%s_%s", profile.Id, profile.Selectors[index].Name, item),
+			Name:               fmt.Sprintf("pool_%s_%s", profile.Id, item),
 			DoubleRangeFilters: filters,
 			StringEqualsFilters: []*pb.StringEqualsFilter{
 				{

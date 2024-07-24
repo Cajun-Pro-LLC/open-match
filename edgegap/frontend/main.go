@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -40,6 +41,8 @@ func createTicket(ctx echo.Context) error {
 		log.Println("Request Payload didn't match TicketRequestModel attributes")
 		return c.RespondError(http.StatusBadRequest)
 	}
+	tReq, _ := json.Marshal(userTicketRequest)
+	log.Printf("Request Payload: %s", string(tReq))
 
 	service, conn := getFrontendServiceClient()
 	defer func() {
@@ -55,6 +58,9 @@ func createTicket(ctx echo.Context) error {
 		Tags:       []string{userTicketRequest.ProfileId},
 	}
 	searchFields.StringArgs["playerId"] = userTicketRequest.PlayerId
+
+	sf, _ := json.Marshal(searchFields)
+	log.Printf("Search Fields: %s", string(sf))
 
 	req := &pb.CreateTicketRequest{
 		Ticket: &pb.Ticket{
