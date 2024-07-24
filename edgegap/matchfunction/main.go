@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"log"
 	"net"
 	"net/http"
@@ -82,6 +84,18 @@ func createMatchProposal(poolTickets map[string][]*pb.Ticket, ticketsPerPoolPerM
 
 func findMatchProposals(p *pb.MatchProfile, poolTickets map[string][]*pb.Ticket) ([]*pb.Match, error) {
 	ticketsPerPoolPerMatch := 2
+
+	playerCountBytes, ok := p.GetExtensions()["playerCount"]
+	if ok {
+		var intValue wrapperspb.Int32Value
+		err := proto.Unmarshal(playerCountBytes.GetValue(), &intValue)
+		if err != nil {
+			fmt.Printf("Failed to unmarshal playerCount")
+		} else {
+			ticketsPerPoolPerMatch = int(intValue.GetValue())
+		}
+	}
+
 	var matches []*pb.Match
 	count := 0
 	for {
