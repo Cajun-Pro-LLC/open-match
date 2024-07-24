@@ -11,8 +11,9 @@ import (
 )
 
 type Arbitrum struct {
-	client *swagger.APIClient
-	ctx    context.Context
+	client     *swagger.APIClient
+	ctx        context.Context
+	matchmaker *Matchmaker
 }
 
 func newArbitrum() *Arbitrum {
@@ -26,15 +27,6 @@ func newArbitrum() *Arbitrum {
 			Prefix: "token",
 		}),
 	}
-}
-
-func (a *Arbitrum) sendGameserverDeployment(deployment swagger.DeployModel) (*swagger.Request, error) {
-	request, _, err := a.client.DeploymentsApi.Deploy(a.ctx, deployment)
-	if err != nil {
-		log.Printf("Could not deploy game server, err: %v", err.Error())
-		return nil, err
-	}
-	return &request, nil
 }
 
 func (a *Arbitrum) waitForGameServerReady(request *swagger.Request) (*swagger.Status, error) {
@@ -60,17 +52,35 @@ func (a *Arbitrum) waitForGameServerReady(request *swagger.Request) (*swagger.St
 
 func (a *Arbitrum) DeployGameserver(gs *Gameserver) error {
 	// Perform deployment
-	request, err := a.sendGameserverDeployment(gs.getDeployModel())
+	request, _, err := a.client.DeploymentsApi.Deploy(a.ctx, gs.getDeployModel())
 	if err != nil {
+		log.Printf("Could not deploy game server, err: %v", err.Error())
 		return err
 	}
 
 	// Wait for server ready
-	response, err := a.waitForGameServerReady(request)
+	response, err := a.waitForGameServerReady(&request)
 	if err != nil {
 		return err
 	}
 
-	gs.Connection = fmt.Sprintf("%s:%d", response.PublicIp, response.Ports[gs.GamePort].External)
+	gs.Connection = fmt.Sprintf("%s:%d", response.PublicIp, response.Ports[gs.getMatchProfile().GamePort].External)
+	return nil
+}
+
+func (a *Arbitrum) LoadConfiguration() error {
+	configName := os.Getenv("CONFIG_NAME")
+	if configName == "" {
+		configName = "default"
+	}
+	resp, _, err := a.client.MatchmakerApi.GetMatchmakerReleaseConfig(a.ctx, configName)
+	if err != nil {
+		log.Printf("Error laoding configuration: %s", err.Error())
+		return err
+	}
+	a.matchmaker, err = NewMatchmaker(resp.Name, resp.UpdatedAt, resp.Configuration)
+	if err != nil {
+		return err
+	}
 	return nil
 }

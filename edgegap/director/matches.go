@@ -1,65 +1,83 @@
 package main
 
 import (
+	"director/config"
 	"fmt"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"open-match.dev/open-match/pkg/pb"
 )
 
-type Mode string
+func buildPools(profile *config.MatchmakerProfile, matchProfiles *[]*pb.MatchProfile, tempProfile []*pb.Pool, index int) {
+	if index == len(profile.Selectors) {
+		pools := make([]*pb.Pool, len(tempProfile))
+		copy(pools, tempProfile)
 
-const (
-	Dev      Mode = "dev"
-	Unranked Mode = "unranked"
-	Ranked   Mode = "ranked"
-	Event    Mode = "event"
-)
+		// Append pools to the last created profile
+		if len(*matchProfiles) > 0 {
+			(*matchProfiles)[len(*matchProfiles)-1].Pools = append((*matchProfiles)[len(*matchProfiles)-1].Pools, pools...)
+		}
 
-func (c Mode) String() string {
-	return string(c)
-}
-
-type Category string
-
-const (
-	OneVsOne   Category = "1v1"
-	FreeForAll Category = "ffa"
-	Teams      Category = "teams"
-	Royale     Category = "royale"
-)
-
-func (c Category) String() string {
-	return string(c)
-}
-
-func buildMatchProfile(mode Mode, category Category) *pb.MatchProfile {
-	modeStr := mode.String()
-	categoryStr := category.String()
-	profileName := fmt.Sprintf("%s_%s_profile", modeStr, categoryStr)
-	poolName := fmt.Sprintf("pool_%s_%s", modeStr, categoryStr)
-
-	return &pb.MatchProfile{
-		Name: profileName,
-		Pools: []*pb.Pool{
-			{
-				Name: poolName,
-				TagPresentFilters: []*pb.TagPresentFilter{
-					{Tag: modeStr},
-					{Tag: categoryStr},
+		return
+	}
+	var filters []*pb.DoubleRangeFilter
+	for _, filter := range profile.Filters {
+		f := &pb.DoubleRangeFilter{
+			DoubleArg: filter.Name,
+			Max:       filter.Maximum,
+			Min:       filter.Minimum,
+			Exclude:   pb.DoubleRangeFilter_NONE,
+		}
+		filters = append(filters, f)
+	}
+	for _, item := range profile.Selectors[index].Items {
+		tempProfile[index] = &pb.Pool{
+			Name:               fmt.Sprintf("pool_%s_%s", profile.Selectors[index].Name, item),
+			DoubleRangeFilters: filters,
+			StringEqualsFilters: []*pb.StringEqualsFilter{
+				{
+					StringArg: profile.Selectors[index].Name,
+					Value:     item,
 				},
+			},
+			// TagPresentFilters: []*pb.TagPresentFilter{},
+			CreatedAfter: timestamppb.New(matchmaker.UpdatedAt),
+		}
+		buildPools(profile, matchProfiles, tempProfile, index+1)
+	}
+}
+
+func buildMatchmakerProfile(profile *config.MatchmakerProfile) []*pb.MatchProfile {
+	var matchProfiles []*pb.MatchProfile
+	playerCountPb := &wrapperspb.Int32Value{Value: profile.MatchPlayerCount}
+	playerCount, err := proto.Marshal(playerCountPb)
+	if err != nil {
+		fmt.Printf("Error marshaling PlayerCount: %s\n", err.Error())
+	}
+	matchProfile := &pb.MatchProfile{
+		Name:  "profile_" + profile.Id,
+		Pools: []*pb.Pool{},
+		Extensions: map[string]*anypb.Any{
+			"playerCount": {
+				TypeUrl: "type.googleapis.com/google.protobufInt32Value",
+				Value:   playerCount,
 			},
 		},
 	}
+	matchProfiles = append(matchProfiles, matchProfile)
+
+	// Calling our recursive function
+	buildPools(profile, &matchProfiles, make([]*pb.Pool, len(profile.Selectors)), 0)
+
+	return matchProfiles
 }
 
-func BuildMatchProfiles() []*pb.MatchProfile {
-	var profiles []*pb.MatchProfile
-	modes := []Mode{Dev, Unranked, Ranked, Event}
-	categories := []Category{OneVsOne, FreeForAll, Teams, Royale}
-	for _, mode := range modes {
-		for _, category := range categories {
-			profile := buildMatchProfile(mode, category)
-			profiles = append(profiles, profile)
-		}
+func buildMatchmakerProfiles(profiles []*config.MatchmakerProfile) []*pb.MatchProfile {
+	var matchProfiles []*pb.MatchProfile
+	for i := range profiles {
+		matchProfiles = append(matchProfiles, buildMatchmakerProfile(profiles[i])...)
 	}
-	return profiles
+	return matchProfiles
 }

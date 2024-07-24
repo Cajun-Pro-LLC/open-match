@@ -10,12 +10,7 @@ import (
 	"time"
 )
 
-const (
-	// Game server data
-	gameServerPort = "gameport"
-	appName        = "gameserver"
-	appVersion     = "v1.0.0"
-)
+var matchmaker *Matchmaker
 
 func deployMatchGameserver(m *pb.Match) (*Gameserver, error) {
 	// Creating API Client to communicate with arbitrium
@@ -76,6 +71,14 @@ func main() {
 		}
 	}
 	fmt.Println("Starting Director Service...")
+
+	arbitrum := newArbitrum()
+	err := arbitrum.LoadConfiguration()
+	if err != nil {
+		log.Fatalf("Failed to load Arbitrum configuration: %v", err)
+	}
+	matchmaker = arbitrum.matchmaker
+
 	backend, err := NewBackend()
 	if err != nil {
 		log.Fatalf("Failed to create backend: %v", err)
@@ -83,7 +86,7 @@ func main() {
 	for range time.Tick(time.Second * 5) {
 		fmt.Println("Creating matches...")
 		var wg sync.WaitGroup
-		for _, profile := range BuildMatchProfiles() {
+		for _, profile := range buildMatchmakerProfiles(matchmaker.Config.Profiles) {
 			wg.Add(1)
 			go processMatches(&wg, profile, backend)
 		}

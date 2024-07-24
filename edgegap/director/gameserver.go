@@ -1,27 +1,21 @@
 package main
 
 import (
+	"director/config"
+	"fmt"
 	swagger "github.com/cajun-pro-llc/edgegap-swagger"
 	"open-match.dev/open-match/pkg/pb"
 	"strings"
 )
 
 type Gameserver struct {
-	GamePort   string
-	GameMode   Mode
-	Category   Category
 	Players    []*playerDetails
-	MatchId    string
 	Connection string
+	match      *pb.Match
 }
 
 func newGameServer(m *pb.Match) *Gameserver {
-	details := &Gameserver{
-		MatchId:  m.GetMatchId(),
-		GamePort: gameServerPort,
-		GameMode: Mode(m.Extensions["mode"].Value),
-		Category: Category(m.Extensions["category"].Value),
-	}
+	details := &Gameserver{}
 
 	for _, t := range m.GetTickets() {
 		details.Players = append(details.Players, newPlayerDetails(t))
@@ -54,14 +48,34 @@ func (gs *Gameserver) GetTicketIds() []string {
 }
 
 func (gs *Gameserver) getDeployModel() swagger.DeployModel {
-	return swagger.DeployModel{
-		AppName:     appName,
-		VersionName: appVersion,
-		IpList:      gs.GetPlayerIps(),
-		EnvVars: []swagger.DeployEnvModel{
-			{Key: "Mode", Value: gs.GameMode.String()},
-			{Key: "Category", Value: gs.Category.String()},
-			{Key: "PlayerIds", Value: strings.Join(gs.GetPlayerIds(), ",")},
-		},
+	envVars := []swagger.DeployEnvModel{
+		{Key: "PlayerIds", Value: strings.Join(gs.GetPlayerIds(), ",")},
 	}
+	matchProfile := gs.getMatchProfile()
+	for _, selector := range matchProfile.Selectors {
+		if selector.InjectEnv {
+			envVar := swagger.DeployEnvModel{
+				Key:   selector.Key,
+				Value: string(gs.match.Extensions[selector.Key].GetValue()),
+			}
+			envVars = append(envVars, envVar)
+		}
+
+	}
+	return swagger.DeployModel{
+		AppName:     matchProfile.App,
+		VersionName: matchProfile.Version,
+		IpList:      gs.GetPlayerIps(),
+		EnvVars:     envVars,
+	}
+}
+
+func (gs *Gameserver) getMatchProfile() *config.MatchmakerProfile {
+	for _, profile := range matchmaker.Config.Profiles {
+		if "profile_"+profile.Id == gs.match.GetMatchProfile() {
+			return profile
+		}
+	}
+	fmt.Printf("Could not find match profile for %s. Using first profile\n", gs.match.GetMatchProfile())
+	return matchmaker.Config.Profiles[0]
 }
