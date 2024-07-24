@@ -33,7 +33,7 @@ func buildPools(profile *MatchmakerProfile, matchProfiles *[]*pb.MatchProfile, t
 	}
 	for _, item := range profile.Selectors[index].Items {
 		tempProfile[index] = &pb.Pool{
-			Name:               fmt.Sprintf("pool_%s_%s", profile.Selectors[index].Name, item),
+			Name:               fmt.Sprintf("pool_%s_%s_%s", profile.Id, profile.Selectors[index].Name, item),
 			DoubleRangeFilters: filters,
 			StringEqualsFilters: []*pb.StringEqualsFilter{
 				{
