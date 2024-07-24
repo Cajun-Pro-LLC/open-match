@@ -41,7 +41,9 @@ func buildPools(profile *MatchmakerProfile, matchProfiles *[]*pb.MatchProfile, t
 					Value:     item,
 				},
 			},
-			// TagPresentFilters: []*pb.TagPresentFilter{},
+			TagPresentFilters: []*pb.TagPresentFilter{
+				{Tag: profile.Id},
+			},
 			CreatedAfter: timestamppb.New(matchmaker.UpdatedAt),
 		}
 		buildPools(profile, matchProfiles, tempProfile, index+1)
