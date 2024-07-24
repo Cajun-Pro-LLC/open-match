@@ -47,9 +47,7 @@ type MatchmakerProfile struct {
 	DelayToStart int32 `json:"delay_to_start"`
 	// The time in seconds between each iteration of matchmaking.
 	//
-	// Recommended value range: 5-10
-	//
-	// Constraint: Any values under 5 will be ignored
+	// Recommended value range: 5-10 - Any values under 5 will be ignored
 	Refresh int32 `json:"refresh"`
 	// The number of player in a match
 	MatchPlayerCount int32 `json:"match_player_count"`
