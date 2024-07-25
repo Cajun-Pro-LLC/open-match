@@ -36,7 +36,7 @@ func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) e
 
 	poolTickets, err := matchfunction.QueryPools(stream.Context(), p.client, req.GetProfile().GetPools())
 	if err != nil {
-		log.Printf("Failed to query tickets for the given pools, got %s", err.Error())
+		log.Printf("Failed to query tickets for the given pools, got %s\n", err.Error())
 		return err
 	}
 	fmt.Printf("Found %d pools\n", len(poolTickets))
@@ -59,11 +59,11 @@ func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) e
 		return err
 	}
 
-	log.Printf("Streaming %v proposals to Open Match", len(proposals))
+	log.Printf("Streaming %v proposals to Open Match\n", len(proposals))
 	// Stream the generated proposals back to Open Match.
 	for _, proposal := range proposals {
 		if err := stream.Send(&pb.RunResponse{Proposal: proposal}); err != nil {
-			log.Printf("Failed to stream proposals to Open Match, got %s", err.Error())
+			log.Printf("Failed to stream proposals to Open Match, got %s\nb", err.Error())
 			return err
 		}
 	}
@@ -75,7 +75,7 @@ func createMatchProposal(poolTickets map[string][]*pb.Ticket, ticketsPerPoolPerM
 	var matchTickets []*pb.Ticket
 	insufficientTickets := false
 	for pool, tickets := range poolTickets {
-		fmt.Printf("createMatchProposal: Tickets: %d (tpppm: %d)", len(tickets), ticketsPerPoolPerMatch)
+		fmt.Printf("createMatchProposal: Pool=%s|Tickets=%d|GroupSize=%d\n", pool, len(tickets), ticketsPerPoolPerMatch)
 		if len(tickets) < ticketsPerPoolPerMatch {
 			insufficientTickets = true
 			break
