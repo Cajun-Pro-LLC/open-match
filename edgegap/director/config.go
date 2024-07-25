@@ -2,6 +2,7 @@ package main
 
 import (
 	swagger "github.com/cajun-pro-llc/edgegap-swagger"
+	"strings"
 	"time"
 )
 
@@ -16,7 +17,7 @@ func NewMatchmaker(name string, updatedAt string, config *swagger.MatchmakerRele
 		Name:   name,
 		Config: config,
 	}
-	ua, err := time.Parse(time.RFC3339, updatedAt)
+	ua, err := time.Parse(time.RFC3339, strings.Replace(updatedAt, " ", "T", 1))
 	if err != nil {
 		log.Err(err).Str("function", "NewMatchmaker").Str("input", updatedAt).Msg("Failed to parse updatedAt")
 		mm.UpdatedAt = time.Now()

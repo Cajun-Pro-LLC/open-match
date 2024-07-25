@@ -15,7 +15,10 @@ type Gameserver struct {
 type GameserverPlayers []*playerDetails
 
 func newGameServer(m *pb.Match) *Gameserver {
-	details := &Gameserver{}
+	details := &Gameserver{
+		players: []*playerDetails{},
+		match:   m,
+	}
 
 	for _, t := range m.GetTickets() {
 		details.players = append(details.players, newPlayerDetails(t))

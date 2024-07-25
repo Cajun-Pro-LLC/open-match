@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"github.com/cajun-pro-llc/open-match/utils"
 	"io"
 	"open-match.dev/open-match/pkg/pb"
 	"os"
@@ -18,7 +17,7 @@ func NewBackend() (*Backend, error) {
 	omBackendUri := os.Getenv("OM_BACKEND_HOST") + ":" + os.Getenv("OM_BACKEND_GRPC_PORT")
 	l := log.With().Str("uri", omBackendUri).Logger()
 	l.Debug().Msg("creating grpc client for backend service")
-	conn, err := grpc.NewClient(omBackendUri, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := utils.NewGRPCClient(omBackendUri)
 	if err != nil {
 		l.Err(err).Msg("could not create grpc client for backend service")
 		return nil, err
