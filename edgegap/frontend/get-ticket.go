@@ -22,7 +22,7 @@ func getTicket(ctx echo.Context) error {
 	ticket, err := service.GetTicket(context.Background(), &pb.GetTicketRequest{TicketId: ticketId})
 	if err != nil {
 		log.Err(err).Str("ticketId", ticketId).Msg("could not find matching ticket")
-		return c.RespondErrorCustom(http.StatusNotFound, "Ticket not found")
+		return c.RespondErrorCustom(http.StatusNotFound, TicketNotFound)
 	}
 
 	return c.Respond(ticket)

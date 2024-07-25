@@ -23,13 +23,13 @@ func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) e
 		l.Debug().Str("pool", pool).Int("count", len(poolTicket)).Msg("processing tickets")
 	}
 	var wg sync.WaitGroup
-	expiredTickets := findExpiredTickets(poolTickets)
-	if len(expiredTickets) > 0 {
-		go func() {
-			defer wg.Done()
-			deleteTickets(expiredTickets)
-		}()
-	}
+	// expiredTickets := findExpiredTickets(poolTickets)
+	// if len(expiredTickets) > 0 {
+	// 	go func() {
+	// 		defer wg.Done()
+	// 		deleteTickets(expiredTickets)
+	// 	}()
+	// }
 
 	// Generate proposals.
 	proposals, err := findMatchProposals(req.GetProfile(), poolTickets)

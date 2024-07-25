@@ -23,7 +23,7 @@ func createTicket(ctx echo.Context) error {
 	err := c.Bind(&userTicketRequest)
 	if err != nil {
 		log.Err(err).Msg("request did not match CreateTicketRequest attributes")
-		return c.RespondError(http.StatusBadRequest)
+		return c.RespondErrorCustom(http.StatusBadRequest, InvalidRequest)
 	}
 	log.Debug().Object("request", userTicketRequest).Msg("payload")
 
@@ -73,7 +73,7 @@ func createTicket(ctx echo.Context) error {
 	ticket, err = service.CreateTicket(context.Background(), req)
 	if err != nil {
 		log.Err(err).Msg("could not create a ticket")
-		return c.RespondErrorCustom(http.StatusInternalServerError, err.Error())
+		return c.RespondErrorCustom(http.StatusInternalServerError, CreateTicketFailure)
 	}
 
 	return c.Respond(ticket)

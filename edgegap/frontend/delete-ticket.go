@@ -22,7 +22,7 @@ func deleteTicket(ctx echo.Context) error {
 	_, err := service.DeleteTicket(context.Background(), &pb.DeleteTicketRequest{TicketId: ticketId})
 	if err != nil {
 		log.Err(err).Str("ticketId", ticketId).Msg("could not delete ticket")
-		return c.RespondErrorCustom(http.StatusNotFound, "Ticket not found")
+		return c.RespondErrorCustom(http.StatusNotFound, TicketNotFound)
 	}
 
 	return c.Respond(pb.Ticket{Id: ticketId})

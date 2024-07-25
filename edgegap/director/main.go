@@ -79,7 +79,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create backend")
 	}
-	for range time.Tick(time.Second * 5) {
+	for range time.Tick(5 * time.Second) {
 		log.Debug().Msg("Creating matches...")
 		var wg sync.WaitGroup
 		for _, profile := range buildMatchmakerProfiles(matchmaker.Config.Profiles) {

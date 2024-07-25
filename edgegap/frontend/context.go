@@ -54,8 +54,15 @@ type Context struct {
 	echo.Context
 }
 
-func (c *Context) RespondErrorCustom(code int, err string) error {
-	return c.JSON(code, Response{RequestId: c.Response().Header().Get(echo.HeaderXRequestID), Error: err})
+func (c *Context) RespondErrorCustom(code int, err interface{}) error {
+	e := "unknown error type"
+	switch err.(type) {
+	case string:
+		e = err.(string)
+	case error:
+		e = err.(error).Error()
+	}
+	return c.JSON(code, Response{RequestId: c.Response().Header().Get(echo.HeaderXRequestID), Error: e})
 }
 
 func (c *Context) RespondError(code int) error {
