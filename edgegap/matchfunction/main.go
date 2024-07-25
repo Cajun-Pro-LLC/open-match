@@ -39,6 +39,7 @@ func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) e
 		log.Printf("Failed to query tickets for the given pools, got %s", err.Error())
 		return err
 	}
+	fmt.Printf("Found %d pool tickets\n", len(poolTickets))
 	var wg sync.WaitGroup
 	expiredTickets := findExpiredTickets(poolTickets)
 	if len(expiredTickets) > 0 {
