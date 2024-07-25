@@ -57,7 +57,7 @@ func createTicket(ctx echo.Context) error {
 		DoubleArgs: userTicketRequest.Matchmaking.Filters,
 		Tags:       []string{userTicketRequest.ProfileId},
 	}
-	searchFields.StringArgs["playerId"] = userTicketRequest.PlayerId
+	// searchFields.StringArgs["playerId"] = userTicketRequest.PlayerId
 
 	sf, _ := json.Marshal(searchFields)
 	log.Printf("Search Fields: %s", string(sf))
