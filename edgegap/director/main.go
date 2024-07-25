@@ -1,16 +1,11 @@
 package main
 
 import (
-	"os"
-	"sync"
-
-	"fmt"
-	"log"
+	"github.com/cajun-pro-llc/open-match/utils"
 	"open-match.dev/open-match/pkg/pb"
+	"sync"
 	"time"
 )
-
-var matchmaker *Matchmaker
 
 func deployMatchGameserver(m *pb.Match) (*Gameserver, error) {
 	// Creating API Client to communicate with arbitrium
@@ -26,65 +21,65 @@ func deployMatchGameserver(m *pb.Match) (*Gameserver, error) {
 }
 
 // deployGameserversForMatches deploys a game server with Edgegap API and assigns its IP to the match's tickets
-func deployGameserversForMatches(matches []*pb.Match, backend *Backend) []error {
-	var errors []error
+func deployGameserversForMatches(matches []*pb.Match, backend *Backend) error {
+	e := &NestedError{}
 	for _, match := range matches {
+		l := log.With().Str("matchId", match.GetMatchId()).Logger()
 		gs, err := deployMatchGameserver(match)
 		if err != nil {
-			errors = append(errors, fmt.Errorf("error while deploying gameserver for match %v, err: %v", match.GetMatchId(), err))
+			e.Add(err)
+			l.Err(err).Msg("error while deploying gameserver for match")
 			// TODO::Tell the user they gotta requeue
 			continue
 		}
-		if err := backend.AssignMatch(gs); err != nil {
-			errors = append(errors, fmt.Errorf("error while assigning match to gameserver for match %v, gameserver %v, err: %v", match.GetMatchId(), gs.Connection, err))
+		err = backend.AssignMatch(gs)
+		if err != nil {
+			e.Add(err)
+			l.Err(err).Str("gameserver", gs.Connection).Msg("error while assigning match to gameserver")
 		}
 
-		log.Printf("Assigned gameserver %v to match %v", gs.Connection, match.GetMatchId())
+		l.Info().Str("gameserver", gs.Connection).Msg("assigned gameserver to match")
 	}
-	return nil
+	return e.Return()
 }
 
 // processMatches generates and assigns servers to matches for each profile
 func processMatches(wg *sync.WaitGroup, profile *pb.MatchProfile, backend *Backend) {
+	l := log.With().Str("profile", profile.GetName()).Logger()
 	defer wg.Done()
 	matches, err := backend.fetchMatchesForProfile(profile)
 	if err != nil {
-		log.Printf("Failed to fetch matches for profile %v, got %s", profile.GetName(), err.Error())
+		l.Err(err).Msg("failed to fetch matches for profile")
 		return
 	}
+	if len(matches) == 0 {
+		l.Info().Msg("no matches generated")
+	} else {
+		l.Info().Int("count", len(matches)).Msg("generated matches")
+	}
 
-	log.Printf("Generated %v matches for profile %v", len(matches), profile.GetName())
-	errors := deployGameserversForMatches(matches, backend)
-	if errors != nil {
-		log.Printf("Errors occurred while deploying game servers:")
-		for _, e := range errors {
-			log.Println(e.Error())
-		}
+	err = deployGameserversForMatches(matches, backend)
+	if err != nil {
+		log.Err(err).Msg("errors occurred while deploying game servers")
 	}
 }
 
 func main() {
-	if os.Getenv("SHOW_ENV") == "true" {
-		fmt.Println("Environment Variables:")
-		for _, e := range os.Environ() {
-			fmt.Println(e)
-		}
-	}
-	fmt.Println("Starting Director Service...")
-
+	utils.LogEnv()
+	log.Info().Msg("Starting service")
 	arbitrum := newArbitrum()
 	err := arbitrum.LoadConfiguration()
 	if err != nil {
-		log.Fatalf("Failed to load Arbitrum configuration: %v", err)
+		log.Fatal().Stack().Err(err).Msg("Failed to load Arbitrum configuration")
 	}
 	matchmaker = arbitrum.matchmaker
 
 	backend, err := NewBackend()
 	if err != nil {
-		log.Fatalf("Failed to create backend: %v", err)
+		log.Fatal().Err(err).Msg("Failed to create backend")
 	}
 	for range time.Tick(time.Second * 5) {
-		fmt.Println("Creating matches...")
+		log.Debug().Msg("Creating matches...")
 		var wg sync.WaitGroup
 		for _, profile := range buildMatchmakerProfiles(matchmaker.Config.Profiles) {
 			wg.Add(1)

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	swagger "github.com/cajun-pro-llc/edgegap-swagger"
-	"log"
 	"os"
 	"time"
 )
@@ -20,12 +19,13 @@ func newArbitrum() *Arbitrum {
 	// Creating API Client to communicate with arbitrium
 	configuration := swagger.NewConfiguration()
 	configuration.BasePath = os.Getenv("ARBITRIUM_API_URL")
+	apiKey := swagger.APIKey{
+		Key:    os.Getenv("ARBITRUM_API_KEY"),
+		Prefix: "token",
+	}
 	return &Arbitrum{
 		client: swagger.NewAPIClient(configuration),
-		ctx: context.WithValue(context.Background(), swagger.ContextAPIKey, swagger.APIKey{
-			Key:    os.Getenv("ARBITRUM_API_KEY"),
-			Prefix: "token",
-		}),
+		ctx:    context.WithValue(context.Background(), swagger.ContextAPIKey, apiKey),
 	}
 }
 
@@ -38,7 +38,7 @@ func (a *Arbitrum) waitForGameServerReady(request *swagger.Request) (*swagger.St
 	for status != "Status.READY" && time.Since(start).Seconds() <= timeout {
 		response, _, err := a.client.DeploymentsApi.DeploymentStatusGet(a.ctx, request.RequestId)
 		if err != nil {
-			log.Printf("Error while fetching status, err: %v", err.Error())
+			log.Err(err).Msg("error fetching status")
 			continue
 		}
 		status = response.CurrentStatus
@@ -52,7 +52,7 @@ func (a *Arbitrum) waitForGameServerReady(request *swagger.Request) (*swagger.St
 
 func (a *Arbitrum) DeployGameserver(gs *Gameserver) error {
 	// Perform deployment
-	request, _, err := a.client.DeploymentsApi.Deploy(a.ctx, gs.getDeployModel())
+	request, _, err := a.client.DeploymentsApi.Deploy(a.ctx, gs.DeployModel())
 	if err != nil {
 		log.Printf("Could not deploy game server, err: %v", err.Error())
 		return err
@@ -64,7 +64,7 @@ func (a *Arbitrum) DeployGameserver(gs *Gameserver) error {
 		return err
 	}
 
-	gs.Connection = fmt.Sprintf("%s:%d", response.PublicIp, response.Ports[gs.getMatchProfile().GamePort].External)
+	gs.Connection = fmt.Sprintf("%s:%d", response.PublicIp, response.Ports[gs.GamePort()].External)
 	return nil
 }
 
@@ -79,9 +79,6 @@ func (a *Arbitrum) LoadConfiguration() error {
 		return err
 	}
 	fmt.Printf("Loading configuration: %v\n", resp.Configuration)
-	a.matchmaker, err = NewMatchmaker(resp.Name, resp.LastUpdated, &resp.Configuration)
-	if err != nil {
-		return err
-	}
+	a.matchmaker = NewMatchmaker(resp.Name, resp.LastUpdated, &resp.Configuration)
 	return nil
 }

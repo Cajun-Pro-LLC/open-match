@@ -18,16 +18,19 @@ jobs:
     outputs:
       functions: ${{ steps.generate.outputs.functions }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
         with:
-          fetch-depth: 0
-          fetch-tags: true
-
+          files: edgegap/**/*.{go}
+          since_last_remote_commit: true
       - name: Generate change matrix
         id: generate
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          LIST="$(git -p show --name-only | grep '^edgegap' | sed 's/^edgegap\/\(.*\)\/.*/\1/' | sort | uniq | jq -R . | jq -cs .)"
+          LIST="$(sed 's/^edgegap\/\(.*\)\/.*/\1/' <<< $ALL_CHANGED_FILES | sort | uniq | jq -R . | jq -cs .)"
           echo "functions=${LIST}" >> "$GITHUB_OUTPUT"
   docker:
     needs: [ generator ]

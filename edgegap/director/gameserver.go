@@ -1,56 +1,63 @@
 package main
 
 import (
-	"fmt"
 	swagger "github.com/cajun-pro-llc/edgegap-swagger"
 	"open-match.dev/open-match/pkg/pb"
 	"strings"
 )
 
 type Gameserver struct {
-	Players    []*playerDetails
+	players    GameserverPlayers
 	Connection string
 	match      *pb.Match
 }
+
+type GameserverPlayers []*playerDetails
 
 func newGameServer(m *pb.Match) *Gameserver {
 	details := &Gameserver{}
 
 	for _, t := range m.GetTickets() {
-		details.Players = append(details.Players, newPlayerDetails(t))
+		details.players = append(details.players, newPlayerDetails(t))
 	}
 	return details
 }
 
-func (gs *Gameserver) GetPlayerIps() []string {
-	IPs := make([]string, len(gs.Players))
-	for i, p := range gs.Players {
+func (gs GameserverPlayers) IPs() []string {
+	IPs := make([]string, len(gs))
+	for i, p := range gs {
 		IPs[i] = p.IP
 	}
 	return IPs
 }
 
-func (gs *Gameserver) GetPlayerIds() []string {
-	IDs := make([]string, len(gs.Players))
-	for i, p := range gs.Players {
+func (gs GameserverPlayers) IDs() []string {
+	IDs := make([]string, len(gs))
+	for i, p := range gs {
 		IDs[i] = p.PlayerId
 	}
 	return IDs
 }
 
-func (gs *Gameserver) GetTicketIds() []string {
-	TicketIds := make([]string, len(gs.Players))
-	for i, t := range gs.Players {
+func (gs GameserverPlayers) Tickets() []string {
+	TicketIds := make([]string, len(gs))
+	for i, t := range gs {
 		TicketIds[i] = t.TicketId
 	}
 	return TicketIds
 }
 
-func (gs *Gameserver) getDeployModel() swagger.DeployModel {
-	envVars := []swagger.DeployEnvModel{
-		{Key: "PlayerIds", Value: strings.Join(gs.GetPlayerIds(), ",")},
-	}
+func (gs *Gameserver) Players() GameserverPlayers {
+	return gs.players
+}
+
+func (gs *Gameserver) DeployModel() swagger.DeployModel {
 	matchProfile := gs.getMatchProfile()
+	envVars := []swagger.DeployEnvModel{
+		{Key: "PLAYER_IDS", Value: strings.Join(gs.Players().IDs(), ",")},
+		{Key: "MATCH_PROFILE", Value: matchProfile.Id},
+	}
+
 	for _, selector := range matchProfile.Selectors {
 		if selector.InjectEnv {
 			envVar := swagger.DeployEnvModel{
@@ -64,7 +71,7 @@ func (gs *Gameserver) getDeployModel() swagger.DeployModel {
 	return swagger.DeployModel{
 		AppName:     matchProfile.App,
 		VersionName: matchProfile.Version,
-		IpList:      gs.GetPlayerIps(),
+		IpList:      gs.Players().IPs(),
 		EnvVars:     envVars,
 	}
 }
@@ -75,6 +82,10 @@ func (gs *Gameserver) getMatchProfile() *swagger.MatchmakerProfile {
 			return profile
 		}
 	}
-	fmt.Printf("Could not find match profile for %s. Using first profile\n", gs.match.GetMatchProfile())
+	log.Error().Str("matchProfile", gs.match.GetMatchProfile()).Msg("Could not find matching match profile config. Using first profile")
 	return matchmaker.Config.Profiles[0]
+}
+
+func (gs *Gameserver) GamePort() string {
+	return gs.getMatchProfile().GamePort
 }

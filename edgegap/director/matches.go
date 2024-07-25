@@ -3,10 +3,9 @@ package main
 import (
 	"fmt"
 	swagger "github.com/cajun-pro-llc/edgegap-swagger"
-	"google.golang.org/protobuf/proto"
+	"github.com/cajun-pro-llc/open-match/utils"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 	"open-match.dev/open-match/pkg/pb"
 )
 
@@ -47,28 +46,24 @@ func buildPools(profile *swagger.MatchmakerProfile, matchProfiles *[]*pb.MatchPr
 			},
 			CreatedAfter: timestamppb.New(matchmaker.UpdatedAt),
 		}
-		fmt.Printf("Generating pool %s\n", tempProfile[index].Name)
+		utils.PrettyPrint("Generating pool "+tempProfile[index].Name, tempProfile[index])
 		buildPools(profile, matchProfiles, tempProfile, index+1)
 	}
 }
 
 func buildMatchmakerProfile(profile *swagger.MatchmakerProfile) []*pb.MatchProfile {
 	var matchProfiles []*pb.MatchProfile
-	playerCountPb := &wrapperspb.Int32Value{Value: profile.MatchPlayerCount}
-	playerCount, err := proto.Marshal(playerCountPb)
-	if err != nil {
-		fmt.Printf("Error marshaling PlayerCount: %s\n", err.Error())
-	}
 	matchProfile := &pb.MatchProfile{
 		Name:  "profile_" + profile.Id,
 		Pools: []*pb.Pool{},
 		Extensions: map[string]*anypb.Any{
 			"playerCount": {
 				TypeUrl: "type.googleapis.com/google.protobufInt32Value",
-				Value:   playerCount,
+				Value:   utils.Int32ToProto(profile.MatchPlayerCount),
 			},
 		},
 	}
+	utils.PrettyPrint("Generating profile "+matchProfile.Name, matchProfile)
 	matchProfiles = append(matchProfiles, matchProfile)
 
 	// Calling our recursive function

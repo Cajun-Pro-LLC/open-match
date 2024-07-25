@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"io"
-	"log"
 	"open-match.dev/open-match/pkg/pb"
 )
 
