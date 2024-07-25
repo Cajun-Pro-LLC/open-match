@@ -32,14 +32,17 @@ type processor struct {
 
 func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) error {
 	// Fetch tickets for the pools specified in the Match Profile.
-	log.Printf("Generating proposals for function %v", req.GetProfile().GetName())
+	log.Printf("Generating proposals for function %v\n", req.GetProfile().GetName())
 
 	poolTickets, err := matchfunction.QueryPools(stream.Context(), p.client, req.GetProfile().GetPools())
 	if err != nil {
 		log.Printf("Failed to query tickets for the given pools, got %s", err.Error())
 		return err
 	}
-	fmt.Printf("Found %d pool tickets\n", len(poolTickets))
+	fmt.Printf("Found %d pools\n", len(poolTickets))
+	for pool, poolTicket := range poolTickets {
+		fmt.Printf("Found %d tickets in %s\n", pool, len(poolTicket))
+	}
 	var wg sync.WaitGroup
 	expiredTickets := findExpiredTickets(poolTickets)
 	if len(expiredTickets) > 0 {
