@@ -12,21 +12,20 @@ func createMatchProposal(poolTickets map[string][]*pb.Ticket, ticketsPerPoolPerM
 	l := log.With().Str("function", "createMatchProposal").Int("groupSize", ticketsPerPoolPerMatch).Logger()
 	l.Trace().Msg("started")
 	var matchTickets []*pb.Ticket
-	insufficientTickets := false
 	for pool, tickets := range poolTickets {
 		lp := l.With().Str("pool", pool).Int("tickets", len(tickets)).Logger()
 		if len(tickets) < ticketsPerPoolPerMatch {
 			lp.Trace().Msg("insufficient tickets for group size")
-			insufficientTickets = true
-			break
+			continue
 		}
 		// Remove the Tickets from this pool and add them to the match proposal.
 		matchTickets = append(matchTickets, tickets[0:ticketsPerPoolPerMatch]...)
 		poolTickets[pool] = tickets[ticketsPerPoolPerMatch:]
 		lp.Trace().Int("matchTickets", len(matchTickets)).Int("poolTickets", len(poolTickets[pool])).Msg("creating proposal")
+		break
 	}
-	l.Trace().Int("matchTickets", len(matchTickets)).Bool("insufficient", insufficientTickets).Msg("finished")
-	return matchTickets, insufficientTickets
+	l.Trace().Int("matchTickets", len(matchTickets)).Bool("insufficient", len(matchTickets) == 0).Msg("finished")
+	return matchTickets, len(matchTickets) == 0
 }
 
 func findMatchProposals(p *pb.MatchProfile, poolTickets map[string][]*pb.Ticket) ([]*pb.Match, error) {
