@@ -6,6 +6,7 @@ import (
 	"fmt"
 	swagger "github.com/cajun-pro-llc/edgegap-swagger"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -30,17 +31,26 @@ func newArbitrum() *Arbitrum {
 }
 
 func (a *Arbitrum) waitForGameServerReady(request *swagger.Request) (*swagger.Status, error) {
-	timeout := 30.0
+	timeout := 60.0
+	envTimeout := os.Getenv("DEPLOY_TIMEOUT")
+	if envTimeout != "" {
+		t, err := strconv.Atoi(envTimeout)
+		if err == nil && t > 10 {
+			timeout = float64(t)
+		}
+	}
 	start := time.Now()
 	status := ""
+	var err error
 	var response swagger.Status
 	// Waiting for the server to be ready
 	for status != "Status.READY" && time.Since(start).Seconds() <= timeout {
-		response, _, err := a.client.DeploymentsApi.DeploymentStatusGet(a.ctx, request.RequestId)
+		response, _, err = a.client.DeploymentsApi.DeploymentStatusGet(a.ctx, request.RequestId)
 		if err != nil {
 			log.Err(err).Msg("error fetching status")
 			continue
 		}
+		log.Trace().Str("function", "waitForGameServerReady").Str("requestId", request.RequestId).Str("status", response.CurrentStatus).Msg("got deployment status")
 		status = response.CurrentStatus
 		time.Sleep(1 * time.Second) //	let's wait a bit
 	}
@@ -54,7 +64,7 @@ func (a *Arbitrum) DeployGameserver(gs *Gameserver) error {
 	// Perform deployment
 	request, _, err := a.client.DeploymentsApi.Deploy(a.ctx, gs.DeployModel())
 	if err != nil {
-		log.Printf("Could not deploy game server, err: %v", err.Error())
+		log.Err(err).Msg("Could not deploy game server")
 		return err
 	}
 

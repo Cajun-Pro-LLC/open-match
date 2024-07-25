@@ -4,10 +4,19 @@ import (
 	"fmt"
 	swagger "github.com/cajun-pro-llc/edgegap-swagger"
 	"github.com/cajun-pro-llc/open-match/utils"
+	"github.com/rs/zerolog"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"open-match.dev/open-match/pkg/pb"
 )
+
+type Pool struct {
+	p *pb.Pool
+}
+
+func (p Pool) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("name", p.p.Name)
+}
 
 func buildPools(profile *swagger.MatchmakerProfile, matchProfiles *[]*pb.MatchProfile, tempProfile []*pb.Pool, index int) {
 	if index == len(profile.Selectors) {
@@ -46,7 +55,7 @@ func buildPools(profile *swagger.MatchmakerProfile, matchProfiles *[]*pb.MatchPr
 			},
 			CreatedAfter: timestamppb.New(matchmaker.UpdatedAt),
 		}
-		utils.PrettyPrint("Generating pool "+tempProfile[index].Name, tempProfile[index])
+		log.Trace().Object("pool", Pool{tempProfile[index]}).Msg("generating pool")
 		buildPools(profile, matchProfiles, tempProfile, index+1)
 	}
 }
@@ -63,7 +72,7 @@ func buildMatchmakerProfile(profile *swagger.MatchmakerProfile) []*pb.MatchProfi
 			},
 		},
 	}
-	utils.PrettyPrint("Generating profile "+matchProfile.Name, matchProfile)
+	log.Trace().Str("profile", profile.Id).Int32("playerCount", profile.MatchPlayerCount).Msg("building matchmaker profile")
 	matchProfiles = append(matchProfiles, matchProfile)
 
 	// Calling our recursive function
