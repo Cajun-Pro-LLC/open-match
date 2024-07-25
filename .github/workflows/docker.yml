@@ -30,7 +30,7 @@ jobs:
         env:
           ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          echo "ALL CHANGED FILES: $ALL_CHANGED_FILES}"
+          echo "ALL CHANGED FILES: $ALL_CHANGED_FILES"
           LIST="$(sed 's/^edgegap\/\(.*\)\/.*/\1/' <<< $ALL_CHANGED_FILES | sort | uniq | jq -R . | jq -cs .)"
           echo "functions=${LIST}" >> "$GITHUB_OUTPUT"
   docker:
