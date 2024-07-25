@@ -41,7 +41,7 @@ func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) e
 	}
 	fmt.Printf("Found %d pools\n", len(poolTickets))
 	for pool, poolTicket := range poolTickets {
-		fmt.Printf("Found %d tickets in %s\n", pool, len(poolTicket))
+		fmt.Printf("Found %d tickets in %s\n", len(poolTicket), pool)
 	}
 	var wg sync.WaitGroup
 	expiredTickets := findExpiredTickets(poolTickets)
