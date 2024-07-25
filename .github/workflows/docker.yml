@@ -23,13 +23,14 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v44
         with:
-          files: edgegap/**/*.{go}
+          files: edgegap/{director,frontend,matchfunction}/*.{go}
           since_last_remote_commit: true
       - name: Generate change matrix
         id: generate
         env:
           ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
+          echo "ALL CHANGED FILES: $ALL_CHANGED_FILES}
           LIST="$(sed 's/^edgegap\/\(.*\)\/.*/\1/' <<< $ALL_CHANGED_FILES | sort | uniq | jq -R . | jq -cs .)"
           echo "functions=${LIST}" >> "$GITHUB_OUTPUT"
   docker:
