@@ -32,7 +32,6 @@ func main() {
 	pb.RegisterQueryServiceServer(s, &server{
 		client: client,
 	})
-
 	pb.RegisterMatchFunctionServer(s, &processor{
 		client: client,
 	})

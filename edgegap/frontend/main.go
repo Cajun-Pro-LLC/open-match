@@ -41,6 +41,7 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Open Match Frontend")
 	})
+
 	v1 := e.Group("/v1")
 	tickets := v1.Group("/tickets")
 	tickets.POST("", createTicket)

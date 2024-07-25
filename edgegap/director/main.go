@@ -73,6 +73,7 @@ func main() {
 		log.Fatal().Stack().Err(err).Msg("Failed to load Arbitrum configuration")
 	}
 	matchmaker = arbitrum.matchmaker
+
 	backend, err := NewBackend()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create backend")
