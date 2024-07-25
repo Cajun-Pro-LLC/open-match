@@ -15,6 +15,7 @@ func main() {
 	log.Info().Msg("Starting service")
 
 	e := echo.New()
+
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {

@@ -15,6 +15,7 @@ func main() {
 	s := grpc.NewServer()
 	openMatchQueryService := os.Getenv("OM_QUERY_HOST") + ":" + os.Getenv("OM_QUERY_GRPC_PORT")
 	log.Info().Str("uri", openMatchQueryService).Msg("creating grpc client for query service")
+
 	conn, err := utils.NewGRPCClient(openMatchQueryService)
 	if err != nil {
 		log.Panic().Err(err).Msg("could not dial open-match query client service via grpc")

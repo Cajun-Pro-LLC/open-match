@@ -47,6 +47,7 @@ func deployGameserversForMatches(matches []*pb.Match, backend *Backend) error {
 func processMatches(wg *sync.WaitGroup, profile *pb.MatchProfile, backend *Backend) {
 	l := log.With().Str("profile", profile.GetName()).Logger()
 	defer wg.Done()
+
 	matches, err := backend.fetchMatchesForProfile(profile)
 	if err != nil {
 		l.Err(err).Msg("failed to fetch matches for profile")
