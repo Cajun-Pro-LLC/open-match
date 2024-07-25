@@ -71,6 +71,7 @@ func createMatchProposal(poolTickets map[string][]*pb.Ticket, ticketsPerPoolPerM
 	var matchTickets []*pb.Ticket
 	insufficientTickets := false
 	for pool, tickets := range poolTickets {
+		fmt.Printf("createMatchProposal: Tickets: %d (tpppm: %d)", len(tickets), ticketsPerPoolPerMatch)
 		if len(tickets) < ticketsPerPoolPerMatch {
 			insufficientTickets = true
 			break
