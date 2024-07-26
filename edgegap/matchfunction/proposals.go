@@ -6,22 +6,23 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"open-match.dev/open-match/pkg/pb"
+	"strings"
 	"time"
 )
 
-func createMatchProposal(poolTickets map[string][]*pb.Ticket, ticketsPerPoolPerMatch int) ([]*pb.Ticket, bool) {
-	l := log.With().Str("function", "createMatchProposal").Int("groupSize", ticketsPerPoolPerMatch).Logger()
+func createStaticMatchProposal(poolTickets map[string][]*pb.Ticket, playerCount int) ([]*pb.Ticket, bool) {
+	l := log.With().Str("function", "createStaticMatchProposal").Int("playerCount", playerCount).Logger()
 	l.Trace().Msg("started")
 	var matchTickets []*pb.Ticket
 	for pool, tickets := range poolTickets {
 		lp := l.With().Str("pool", pool).Int("tickets", len(tickets)).Logger()
-		if len(tickets) < ticketsPerPoolPerMatch {
+		if len(tickets) < playerCount {
 			lp.Trace().Msg("insufficient tickets for group size")
 			continue
 		}
 		// Remove the Tickets from this pool and add them to the match proposal.
-		matchTickets = append(matchTickets, tickets[0:ticketsPerPoolPerMatch]...)
-		poolTickets[pool] = tickets[ticketsPerPoolPerMatch:]
+		matchTickets = append(matchTickets, tickets[0:playerCount]...)
+		poolTickets[pool] = tickets[playerCount:]
 		lp.Trace().Int("matchTickets", len(matchTickets)).Int("poolTickets", len(poolTickets[pool])).Msg("creating proposal")
 		break
 	}
@@ -29,26 +30,65 @@ func createMatchProposal(poolTickets map[string][]*pb.Ticket, ticketsPerPoolPerM
 	return matchTickets, len(matchTickets) == 0
 }
 
+func createSteppedMatchProposal(poolTickets map[string][]*pb.Ticket, playerMin int, playerMax int, playerStep int) ([]*pb.Ticket, bool) {
+	l := log.With().Str("function", "createSteppedMatchProposal").Int("playerMin", playerMin).Int("playerMax", playerMax).Int("playerStep", playerStep).Logger()
+	l.Trace().Msg("started")
+	var matchTickets []*pb.Ticket
+	insufficient := true
+
+	stepDuration := time.Duration(playerStep) * time.Second // convert step in seconds into time.Duration
+
+	// Current time when function is called
+	currentTime := time.Now()
+
+	for playerCount := playerMax; playerCount >= playerMin; playerCount-- {
+		lp := l.With().Int("playerCount", playerCount).Logger()
+		lp.Trace().Msg("trying to find match with current player count")
+
+		// Create a new map for recently created tickets
+		recentPoolTickets := make(map[string][]*pb.Ticket)
+
+		// Filter tickets: ticket is considered eligible if it is created earlier, or within the last stepDuration
+		for pool, tickets := range poolTickets {
+			for _, ticket := range tickets {
+				if currentTime.Sub(ticket.CreateTime.AsTime()) >= stepDuration {
+					recentPoolTickets[pool] = append(recentPoolTickets[pool], ticket)
+				}
+			}
+		}
+
+		matchTickets, insufficient = createStaticMatchProposal(recentPoolTickets, playerCount)
+		if !insufficient {
+			break
+		}
+
+		lp.Trace().Msg("insufficient tickets for current player count")
+		// subtract step duration for the next iteration
+		currentTime = currentTime.Add(-stepDuration)
+	}
+	l.Trace().Int("matchTickets", len(matchTickets)).Bool("insufficient", insufficient).Msg("finished")
+	return matchTickets, insufficient
+}
+
 func findMatchProposals(p *pb.MatchProfile, poolTickets map[string][]*pb.Ticket) ([]*pb.Match, error) {
 	l := log.With().Str("function", "findMatchProposals").Str("profile", p.GetName()).Logger()
-	ticketsPerPoolPerMatch := 2
+	playerCount := int(getProtoInt32(p.GetExtensions(), "playerCount", 2))
+	playerMin := int(getProtoInt32(p.GetExtensions(), "playerMin", 2))
+	playerMax := int(getProtoInt32(p.GetExtensions(), "playerMax", 5))
+	playerStep := int(getProtoInt32(p.GetExtensions(), "playerStep", -1))
 
-	playerCountBytes, ok := p.GetExtensions()["playerCount"]
-	if ok {
-		var intValue wrapperspb.Int32Value
-		err := proto.Unmarshal(playerCountBytes.GetValue(), &intValue)
-		if err != nil {
-			l.Err(err).Msg("failed to unmarshal playerCount")
-		} else {
-			ticketsPerPoolPerMatch = int(intValue.GetValue())
-		}
-	}
-	l = l.With().Int("groupSize", ticketsPerPoolPerMatch).Logger()
+	l = l.With().Int("groupSize", playerCount).Logger()
 	l.Trace().Msg("started")
 	var matches []*pb.Match
 	count := 0
 	for {
-		matchTickets, insufficientTickets := createMatchProposal(poolTickets, ticketsPerPoolPerMatch)
+		var matchTickets []*pb.Ticket
+		var insufficientTickets bool
+		if strings.Contains(strings.ToLower(p.GetName()), "ffa") && playerStep > -1 {
+			matchTickets, insufficientTickets = createSteppedMatchProposal(poolTickets, playerMin, playerMax, playerStep)
+		} else {
+			matchTickets, insufficientTickets = createStaticMatchProposal(poolTickets, playerCount)
+		}
 		l = l.With().Int("count", count).Int("matchTickets", len(matchTickets)).Bool("insufficient", insufficientTickets).Logger()
 		if insufficientTickets {
 			l.Trace().Msg("break")
@@ -73,4 +113,18 @@ func findMatchProposals(p *pb.MatchProfile, poolTickets map[string][]*pb.Ticket)
 	}
 	l.Trace().Msg("finished")
 	return matches, nil
+}
+
+func getProtoInt32(extensions map[string]*anypb.Any, key string, fallback int32) int32 {
+	p, ok := extensions[key]
+	if ok {
+		var intValue wrapperspb.Int32Value
+		err := proto.Unmarshal(p.GetValue(), &intValue)
+		if err != nil {
+			log.Err(err).Str("key", key).Msg("failed to unmarshal")
+		} else {
+			return intValue.GetValue()
+		}
+	}
+	return fallback
 }

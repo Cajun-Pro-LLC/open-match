@@ -72,6 +72,21 @@ func buildMatchmakerProfile(profile *swagger.MatchmakerProfile) []*pb.MatchProfi
 			},
 		},
 	}
+	if profile.Id == "ffa" && profile.MatchPlayerCount == 5 {
+		matchProfile.Extensions["playerMin"] = &anypb.Any{
+			TypeUrl: "type.googleapis.com/google.protobufInt32Value",
+			Value:   utils.Int32ToProto(3),
+		}
+		matchProfile.Extensions["playerMax"] = &anypb.Any{
+			TypeUrl: "type.googleapis.com/google.protobufInt32Value",
+			Value:   utils.Int32ToProto(5),
+		}
+		matchProfile.Extensions["playerStep"] = &anypb.Any{
+			TypeUrl: "type.googleapis.com/google.protobufInt32Value",
+			Value:   utils.Int32ToProto(10),
+		}
+	}
+
 	log.Trace().Str("profile", profile.Id).Int32("playerCount", profile.MatchPlayerCount).Msg("building matchmaker profile")
 	matchProfiles = append(matchProfiles, matchProfile)
 
