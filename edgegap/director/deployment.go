@@ -10,27 +10,27 @@ import (
 	"time"
 )
 
-type Arbitrum struct {
+type Arbitrium struct {
 	client     *swagger.APIClient
 	ctx        context.Context
 	matchmaker *Matchmaker
 }
 
-func newArbitrum() *Arbitrum {
+func newArbitrum() *Arbitrium {
 	// Creating API Client to communicate with arbitrium
 	configuration := swagger.NewConfiguration()
 	configuration.BasePath = os.Getenv("ARBITRIUM_API_URL")
 	apiKey := swagger.APIKey{
-		Key:    os.Getenv("ARBITRUM_API_KEY"),
+		Key:    os.Getenv("ARBITRIUM_API_KEY"),
 		Prefix: "token",
 	}
-	return &Arbitrum{
+	return &Arbitrium{
 		client: swagger.NewAPIClient(configuration),
 		ctx:    context.WithValue(context.Background(), swagger.ContextAPIKey, apiKey),
 	}
 }
 
-func (a *Arbitrum) waitForGameServerReady(request *swagger.Request) (*swagger.Status, error) {
+func (a *Arbitrium) waitForGameServerReady(request *swagger.Request) (*swagger.Status, error) {
 	timeout := 60.0
 	envTimeout := os.Getenv("DEPLOY_TIMEOUT")
 	if envTimeout != "" {
@@ -60,7 +60,7 @@ func (a *Arbitrum) waitForGameServerReady(request *swagger.Request) (*swagger.St
 	return &response, nil
 }
 
-func (a *Arbitrum) DeployGameserver(gs *Gameserver) error {
+func (a *Arbitrium) DeployGameserver(gs *Gameserver) error {
 	// Perform deployment
 	request, _, err := a.client.DeploymentsApi.Deploy(a.ctx, gs.DeployModel())
 	if err != nil {
@@ -78,7 +78,7 @@ func (a *Arbitrum) DeployGameserver(gs *Gameserver) error {
 	return nil
 }
 
-func (a *Arbitrum) LoadConfiguration() error {
+func (a *Arbitrium) LoadConfiguration() error {
 	configName := os.Getenv("CONFIG_NAME")
 	if configName == "" {
 		configName = "default"
