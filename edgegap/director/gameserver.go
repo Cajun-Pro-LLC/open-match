@@ -59,8 +59,17 @@ func (gs *Gameserver) Players() GameserverPlayers {
 func (gs *Gameserver) DeployModel() swagger.DeployModel {
 	matchProfile := gs.getMatchProfile()
 	envVars := []swagger.DeployEnvModel{
-		{Key: "MATCH_PLAYER_IDS", Value: strings.Join(gs.Players().IDs(), ",")},
-		{Key: "MATCH_PROFILE", Value: matchProfile.Id},
+		{
+			Key:   "MATCH_PLAYER_IDS",
+			Value: strings.Join(gs.Players().IDs(), ","),
+		},
+		{
+			Key:   "MATCH_PROFILE",
+			Value: matchProfile.Id},
+		{
+			Key:   "MATCH_PLAYER_COUNT",
+			Value: strconv.Itoa(int(utils.ProtoToInt32(gs.match.Extensions["playerCount"], matchProfile.MatchPlayerCount))),
+		},
 	}
 
 	for _, selector := range matchProfile.Selectors {
@@ -73,13 +82,6 @@ func (gs *Gameserver) DeployModel() swagger.DeployModel {
 		}
 	}
 
-	if utils.ProtoToBool(gs.match.Extensions["isStepped"], false) {
-		envVar := swagger.DeployEnvModel{
-			Key:   "MATCH_PLAYER_COUNT",
-			Value: strconv.Itoa(int(utils.ProtoToInt32(gs.match.Extensions["playerCount"], matchProfile.MatchPlayerCount))),
-		}
-		envVars = append(envVars, envVar)
-	}
 	return swagger.DeployModel{
 		AppName:     matchProfile.App,
 		VersionName: matchProfile.Version,
