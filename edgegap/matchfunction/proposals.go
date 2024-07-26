@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"open-match.dev/open-match/pkg/pb"
 	"time"
@@ -54,11 +55,19 @@ func findMatchProposals(p *pb.MatchProfile, poolTickets map[string][]*pb.Ticket)
 			break
 		}
 		l.Trace().Msg("found match")
+		extensions := map[string]*anypb.Any{}
+		for key, value := range matchTickets[0].SearchFields.StringArgs {
+			extensions[key] = &anypb.Any{
+				TypeUrl: "type.googleapis.com/google.protobuf.StringValue",
+				Value:   []byte(value),
+			}
+		}
 		matches = append(matches, &pb.Match{
 			MatchId:       fmt.Sprintf("profile-%v-time-%v-%v", p.GetName(), time.Now().Format("2006-01-02T15:04:05.00"), count),
 			MatchProfile:  p.GetName(),
 			MatchFunction: matchName,
 			Tickets:       matchTickets,
+			Extensions:    extensions,
 		})
 		count++
 	}

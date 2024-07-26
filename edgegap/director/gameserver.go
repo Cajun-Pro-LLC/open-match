@@ -64,8 +64,8 @@ func (gs *Gameserver) DeployModel() swagger.DeployModel {
 	for _, selector := range matchProfile.Selectors {
 		if selector.InjectEnv {
 			envVar := swagger.DeployEnvModel{
-				Key:   selector.Key,
-				Value: string(gs.match.Extensions[selector.Key].GetValue()),
+				Key:   "MATCH_" + strings.ToUpper(selector.Key),
+				Value: gs.match.Tickets[0].SearchFields.StringArgs[selector.Key],
 			}
 			envVars = append(envVars, envVar)
 		}
