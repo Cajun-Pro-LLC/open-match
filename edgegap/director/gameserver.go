@@ -2,7 +2,9 @@ package main
 
 import (
 	swagger "github.com/cajun-pro-llc/edgegap-swagger"
+	"github.com/cajun-pro-llc/open-match/utils"
 	"open-match.dev/open-match/pkg/pb"
+	"strconv"
 	"strings"
 )
 
@@ -69,7 +71,14 @@ func (gs *Gameserver) DeployModel() swagger.DeployModel {
 			}
 			envVars = append(envVars, envVar)
 		}
+	}
 
+	if utils.ProtoToBool(gs.match.Extensions["isStepped"], false) {
+		envVar := swagger.DeployEnvModel{
+			Key:   "MATCH_PLAYER_COUNT",
+			Value: strconv.Itoa(int(utils.ProtoToInt32(gs.match.Extensions["playerCount"], matchProfile.MatchPlayerCount))),
+		}
+		envVars = append(envVars, envVar)
 	}
 	return swagger.DeployModel{
 		AppName:     matchProfile.App,

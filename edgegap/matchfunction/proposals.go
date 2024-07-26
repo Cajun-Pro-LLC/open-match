@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
-	"google.golang.org/protobuf/proto"
+	"github.com/cajun-pro-llc/open-match/utils"
 	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 	"open-match.dev/open-match/pkg/pb"
 	"strings"
 	"time"
@@ -72,11 +71,11 @@ func createSteppedMatchProposal(poolTickets map[string][]*pb.Ticket, playerMin i
 
 func findMatchProposals(p *pb.MatchProfile, poolTickets map[string][]*pb.Ticket) ([]*pb.Match, error) {
 	l := log.With().Str("function", "findMatchProposals").Str("profile", p.GetName()).Logger()
-	playerCount := int(getProtoInt32(p.GetExtensions(), "playerCount", 2))
-	playerMin := int(getProtoInt32(p.GetExtensions(), "playerMin", 2))
-	playerMax := int(getProtoInt32(p.GetExtensions(), "playerMax", 5))
-	playerStep := int(getProtoInt32(p.GetExtensions(), "playerStep", -1))
-
+	playerCount := int(utils.ProtoToInt32(p.GetExtensions()["playerCount"], 2))
+	playerMin := int(utils.ProtoToInt32(p.GetExtensions()["playerMin"], 2))
+	playerMax := int(utils.ProtoToInt32(p.GetExtensions()["playerMax"], 5))
+	playerStep := int(utils.ProtoToInt32(p.GetExtensions()["playerStep"], -1))
+	isStepped := strings.Contains(strings.ToLower(p.GetName()), "ffa") && playerStep > -1
 	l = l.With().Int("groupSize", playerCount).Logger()
 	l.Trace().Msg("started")
 	var matches []*pb.Match
@@ -84,7 +83,7 @@ func findMatchProposals(p *pb.MatchProfile, poolTickets map[string][]*pb.Ticket)
 	for {
 		var matchTickets []*pb.Ticket
 		var insufficientTickets bool
-		if strings.Contains(strings.ToLower(p.GetName()), "ffa") && playerStep > -1 {
+		if isStepped {
 			matchTickets, insufficientTickets = createSteppedMatchProposal(poolTickets, playerMin, playerMax, playerStep)
 		} else {
 			matchTickets, insufficientTickets = createStaticMatchProposal(poolTickets, playerCount)
@@ -95,15 +94,26 @@ func findMatchProposals(p *pb.MatchProfile, poolTickets map[string][]*pb.Ticket)
 			break
 		}
 		l.Trace().Msg("found match")
-		extensions := map[string]*anypb.Any{}
+		extensions := map[string]*anypb.Any{
+			"isStepped": {
+				TypeUrl: "type.googleapis.com/google.protobuf.BoolValue",
+				Value:   utils.BoolToProto(isStepped),
+			},
+		}
 		for key, value := range matchTickets[0].SearchFields.StringArgs {
 			extensions[key] = &anypb.Any{
 				TypeUrl: "type.googleapis.com/google.protobuf.StringValue",
 				Value:   []byte(value),
 			}
 		}
+		if isStepped {
+			extensions["playerCount"] = &anypb.Any{
+				TypeUrl: "type.googleapis.com/google.protobuf.StringValue",
+				Value:   utils.Int32ToProto(int32(len(matchTickets))),
+			}
+		}
 		matches = append(matches, &pb.Match{
-			MatchId:       fmt.Sprintf("profile-%v-time-%v-%v", p.GetName(), time.Now().Format("2006-01-02T15:04:05.00"), count),
+			MatchId:       fmt.Sprintf("profile-%v-time-%v-%v", p.GetName(), time.Now().Format(time.RFC3339), count),
 			MatchProfile:  p.GetName(),
 			MatchFunction: matchName,
 			Tickets:       matchTickets,
@@ -113,18 +123,4 @@ func findMatchProposals(p *pb.MatchProfile, poolTickets map[string][]*pb.Ticket)
 	}
 	l.Trace().Msg("finished")
 	return matches, nil
-}
-
-func getProtoInt32(extensions map[string]*anypb.Any, key string, fallback int32) int32 {
-	p, ok := extensions[key]
-	if ok {
-		var intValue wrapperspb.Int32Value
-		err := proto.Unmarshal(p.GetValue(), &intValue)
-		if err != nil {
-			log.Err(err).Str("key", key).Msg("failed to unmarshal")
-		} else {
-			return intValue.GetValue()
-		}
-	}
-	return fallback
 }
