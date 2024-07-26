@@ -57,7 +57,7 @@ func (gs *Gameserver) Players() GameserverPlayers {
 func (gs *Gameserver) DeployModel() swagger.DeployModel {
 	matchProfile := gs.getMatchProfile()
 	envVars := []swagger.DeployEnvModel{
-		{Key: "PLAYER_IDS", Value: strings.Join(gs.Players().IDs(), ",")},
+		{Key: "MATCH_PLAYER_IDS", Value: strings.Join(gs.Players().IDs(), ",")},
 		{Key: "MATCH_PROFILE", Value: matchProfile.Id},
 	}
 
