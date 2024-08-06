@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+
 	"github.com/cajun-pro-llc/open-match/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
-	"net/http"
-	"os"
 )
 
 func main() {
@@ -37,7 +38,7 @@ func main() {
 	}))
 	e.Use(middleware.RequestID())
 	e.Use(middleware.Decompress())
-	e.IPExtractor = echo.ExtractIPDirect()
+	e.IPExtractor = echo.ExtractIPFromXFFHeader()
 
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Open Match Frontend")
