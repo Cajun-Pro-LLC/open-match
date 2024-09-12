@@ -1,9 +1,10 @@
 package main
 
 import (
+	"sync"
+
 	"open-match.dev/open-match/pkg/matchfunction"
 	"open-match.dev/open-match/pkg/pb"
-	"sync"
 )
 
 type processor struct {
@@ -13,6 +14,13 @@ type processor struct {
 func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) error {
 	// Fetch tickets for the pools specified in the Match Profile.
 	l := log.With().Str("profile", req.GetProfile().GetName()).Logger()
+
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Recovered from panic:", r)
+		}
+	}()
+
 	l.Debug().Msg("processing proposals")
 	poolTickets, err := matchfunction.QueryPools(stream.Context(), p.client, req.GetProfile().GetPools())
 	if err != nil {
@@ -30,6 +38,8 @@ func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) e
 			deleteTickets(expiredTickets)
 		}()
 	}
+
+	wg.Wait()
 
 	// Generate proposals.
 	proposals, err := findMatchProposals(req.GetProfile(), poolTickets)
@@ -50,6 +60,5 @@ func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) e
 			return err
 		}
 	}
-	wg.Wait()
 	return nil
 }
