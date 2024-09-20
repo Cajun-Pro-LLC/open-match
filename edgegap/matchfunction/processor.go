@@ -33,6 +33,7 @@ func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) e
 	var wg sync.WaitGroup
 	expiredTickets := findExpiredTickets(poolTickets)
 	if len(expiredTickets) > 0 {
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			deleteTickets(expiredTickets)
