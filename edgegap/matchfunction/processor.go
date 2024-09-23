@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 
 	"open-match.dev/open-match/pkg/matchfunction"
 	"open-match.dev/open-match/pkg/pb"
+	"runtime/debug"
 )
 
 type processor struct {
@@ -17,7 +19,7 @@ func (p *processor) Run(req *pb.RunRequest, stream pb.MatchFunction_RunServer) e
 
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("Recovered from panic:", r)
+			fmt.Println("Recovered from panic: \n", string(debug.Stack()))
 		}
 	}()
 
